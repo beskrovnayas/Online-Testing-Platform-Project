@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+venv/
+env/
+.venv/
+.env
+
+# База данных
+*.sqlite3
+db.sqlite3
+
+# Логи
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Django
+/media/
+/static/
+*.pot
+
+**/migrations/__pycache__/
+
+*.tmp
