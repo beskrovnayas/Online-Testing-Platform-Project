@@ -3,8 +3,12 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
 from django.contrib.auth import get_user_model
-from .models import Test, TestAttempt, UserAnswer
-from .serializers import SubmitAnswersSerializer
+from .models import Test, TestAttempt, UserAnswer, Question, AnswerOption
+from .serializers import SubmitAnswersSerializer, TestSerializer, QuestionSerializer, AnswerOptionSerializer
+from rest_framework.permissions import IsAuthenticated
+from users.permissions import IsStudent, IsTeacherOrAdmin
+from rest_framework.viewsets import ModelViewSet
+from rest_framework.exceptions import ValidationError
 
 User = get_user_model()
 
@@ -19,6 +23,7 @@ class SubmitAnswersView(APIView):
     #         ...
     #     }
     # }
+    permission_classes = [IsAuthenticated, IsStudent]
 
     def post(self, request):
         # 1. Валидация входных данных
@@ -121,3 +126,54 @@ class SubmitAnswersView(APIView):
             },
             status=status.HTTP_200_OK
         )
+
+
+class TestViewSet(ModelViewSet):
+    # CRUD для тестов (доступен учителям и админам)
+    serializer_class = TestSerializer
+    permission_classes = [IsAuthenticated, IsTeacherOrAdmin]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.user_type == 'admin':
+            return Test.objects.all()
+        return Test.objects.filter(author=user)
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
+
+
+class QuestionViewSet(ModelViewSet):
+    # CRUD для вопросов (только для своих тестов)
+    serializer_class = QuestionSerializer
+    permission_classes = [IsAuthenticated, IsTeacherOrAdmin]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.user_type == 'admin':
+            return Question.objects.all()
+        return Question.objects.filter(test__author=user)
+
+    def perform_create(self, serializer):
+        test = serializer.validated_data['test']
+        if self.request.user.user_type != 'admin' and test.author != self.request.user:
+            raise ValidationError("Можно добавлять вопросы только к своим тестам.")
+        serializer.save()
+
+
+class AnswerOptionViewSet(ModelViewSet):
+    # CRUD для вариантов ответа (только для своих вопросов)
+    serializer_class = AnswerOptionSerializer
+    permission_classes = [IsAuthenticated, IsTeacherOrAdmin]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.user_type == 'admin':
+            return AnswerOption.objects.all()
+        return AnswerOption.objects.filter(question__test__author=user)
+
+    def perform_create(self, serializer):
+        question = serializer.validated_data['question']
+        if self.request.user.user_type != 'admin' and question.test.author != self.request.user:
+            raise ValidationError("Можно добавлять варианты только к своим вопросам.")
+        serializer.save()

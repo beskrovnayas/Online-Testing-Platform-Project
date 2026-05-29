@@ -61,6 +61,65 @@ class SingleChoiceStrategy(QuestionStrategy): # один правильный о
             points=points
         )
 
+class MultipleChoiceStrategy(QuestionStrategy): # несколько правильных ответов
+
+    def check_answer(self, user_input: List[int]) -> bool:
+        if not isinstance(user_input, list):
+            return False
+        correct_ids = set(self.question.options.filter(is_correct=True).values_list('id', flat=True))
+        return set(user_input) == correct_ids
+
+    def get_result_structure(self) -> dict:
+        return {
+            'type': 'multiple',
+            'text': self.question.text,
+            'options': [{'id': opt.id, 'text': opt.text} for opt in self.question.options.all()]
+        }
+
+    def validate_user_input(self, user_input) -> bool:
+        if not isinstance(user_input, list):
+            return False
+        all_option_ids = set(self.question.options.values_list('id', flat=True))
+        return all(opt_id in all_option_ids for opt_id in user_input)
+
+    def save_answer(self, attempt, user_input: List[int]) -> UserAnswer:
+        is_correct = self.check_answer(user_input)
+        points = 1 if is_correct else 0
+        return UserAnswer.objects.create(
+            attempt=attempt,
+            question=self.question,
+            selected_option=None,
+            selected_options=user_input,
+            text_answer='',
+            is_correct=is_correct,
+            points=points
+        )
+
+
+class TextStrategy(QuestionStrategy): # открытый вопрос (ручная проверка)
+
+    def check_answer(self, user_input: str) -> None:
+        return None  # автоматическая проверка не производится
+
+    def get_result_structure(self) -> dict:
+        return {
+            'type': 'text',
+            'text': self.question.text,
+        }
+
+    def validate_user_input(self, user_input) -> bool:
+        return isinstance(user_input, str) and len(user_input.strip()) > 0
+
+    def save_answer(self, attempt, user_input: str) -> UserAnswer:
+        return UserAnswer.objects.create(
+            attempt=attempt,
+            question=self.question,
+            selected_option=None,
+            selected_options=[],
+            text_answer=user_input,
+            is_correct=False,   # требует проверки учителем
+            points=0
+        )
 
 # Фабрика стратегий
 def get_strategy(question) -> QuestionStrategy:
