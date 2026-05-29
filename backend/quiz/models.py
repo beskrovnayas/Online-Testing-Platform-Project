@@ -69,6 +69,12 @@ class Question(models.Model): # модель вопроса
         ordering = ['order', 'id']
         verbose_name = "Вопрос"
         verbose_name_plural = "Вопросы"
+        # constraints = [
+        #     models.UniqueConstraint(
+        #         fields=['test', 'order'],
+        #         name='unique_order_per_test'
+        #     )
+        # ]
 
     @property
     def strategy(self): # Возвращает объект стратегии для данного типа вопроса

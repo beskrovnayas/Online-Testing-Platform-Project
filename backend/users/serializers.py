@@ -13,7 +13,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'email': {'required': True},
             'username': {'required': True},
-            'user_type': {'required': True}
+            'user_type': {'required': False}
         }
 
     def validate_email(self, value):
@@ -37,7 +37,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             email=validated_data['email'],
             username=validated_data['username'],
             password=validated_data['password'],
-            user_type=validated_data['user_type']
+            user_type='student'
         )
         return user
 

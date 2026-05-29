@@ -1,16 +1,64 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from django.db.models import Count
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from .models import Test, TestAttempt, UserAnswer, Question, AnswerOption
-from .serializers import SubmitAnswersSerializer, TestSerializer, QuestionSerializer, AnswerOptionSerializer
+from .serializers import SubmitAnswersSerializer, TestSerializer, QuestionSerializer, AnswerOptionSerializer, TestListSerializer, TestDetailSerializer
 from rest_framework.permissions import IsAuthenticated
 from users.permissions import IsStudent, IsTeacherOrAdmin
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.exceptions import ValidationError
 
 User = get_user_model()
+
+
+class TestListView(APIView):
+    # API для получения списка тестов.
+    # GET /api/tests/
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        if user.user_type == 'teacher':
+            tests = Test.objects.filter(author=user)
+        elif user.user_type == 'admin':
+            tests = Test.objects.all()
+        else:  # student
+            tests = Test.objects.all()  # пока все тесты, позже добавим is_published
+
+        tests = (
+            tests
+            .select_related('author')
+            .annotate(questions_count=Count('questions'))
+            .order_by('id')
+        )
+
+        serializer = TestListSerializer(tests, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class TestDetailView(APIView):
+    # API для получения конкретного теста с вопросами и вариантами ответов.
+    # GET /api/tests/{id}/
+
+    def get(self, request, pk):
+        try:
+            test = (
+                Test.objects
+                .select_related('author')
+                .prefetch_related('questions__options')
+                .get(pk=pk)
+            )
+        except Test.DoesNotExist:
+            return Response(
+                {"error": "Тест не найден"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = TestDetailSerializer(test)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 class SubmitAnswersView(APIView):
     # Эндпоинт для отправки ответов пользователя и получения результата.
@@ -47,14 +95,7 @@ class SubmitAnswersView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        # 3. Временно берём фиксированного пользователя (потом заменим на request.user)
-        try:
-            user = User.objects.get(id=1)
-        except User.DoesNotExist:
-            return Response(
-                {"error": "Пользователь не найден. Создайте пользователя с id=1."},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+        user = request.user
 
         # 4. Создаём запись о попытке прохождения теста
         attempt = TestAttempt.objects.create(
