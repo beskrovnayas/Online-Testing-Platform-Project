@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
+from django.core.exceptions import ValidationError
 
 class Test(models.Model): # модель теста
     title = models.CharField(max_length=200, verbose_name="Название теста")
@@ -19,8 +20,10 @@ class Test(models.Model): # модель теста
         return self.title
 
     class Meta:
+        ordering = ['-id']
         verbose_name = "Тест"
         verbose_name_plural = "Тесты"
+        indexes = [models.Index(fields=['author']),]
 
 
 class AnswerOption(models.Model): # модель варианта ответа 
@@ -35,10 +38,21 @@ class AnswerOption(models.Model): # модель варианта ответа
 
     def __str__(self):
         return self.text[:50]
+    
+    def clean(self):
+        if self.is_correct and self.question:
+            correct_answer_already_exists = AnswerOption.objects.filter(question=self.question, is_correct=True).exclude(id=self.id).exists()
+            if correct_answer_already_exists: raise ValidationError("Для этого вопроса уже выбран правильный вариант ответа")
+    
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
 
     class Meta:
+        ordering = ['id']
         verbose_name = "Вариант ответа"
         verbose_name_plural = "Варианты ответов"
+        indexes = [models.Index(fields=['question']),]
 
 
 class Question(models.Model): # модель вопроса
@@ -69,12 +83,8 @@ class Question(models.Model): # модель вопроса
         ordering = ['order', 'id']
         verbose_name = "Вопрос"
         verbose_name_plural = "Вопросы"
-        # constraints = [
-        #     models.UniqueConstraint(
-        #         fields=['test', 'order'],
-        #         name='unique_order_per_test'
-        #     )
-        # ]
+        indexes = [models.Index(fields=['test']),]
+        constraints = [models.UniqueConstraint(fields=['test', 'order'], name='unique_order_per_test')]
 
     @property
     def strategy(self): # Возвращает объект стратегии для данного типа вопроса
@@ -103,6 +113,7 @@ class TestAttempt(models.Model): # модель попытки прохожде�
         return f"{self.user.email} - {self.test.title} ({self.started_at})"
 
     class Meta:
+        ordering = ['-started_at', '-id']
         verbose_name = "Попытка прохождения"
         verbose_name_plural = "Попытки прохождения"
 
@@ -138,3 +149,8 @@ class UserAnswer(models.Model): # модель ответа пользовате
 
     def __str__(self):
         return f"Ответ на {self.question.text[:30]}"
+    
+    class Meta:
+        ordering = ['id']
+        constraints = [models.UniqueConstraint(fields=['attempt', 'question'], name='unique_answer_per_question_attempt')]
+        indexes = [models.Index(fields=['attempt']), models.Index(fields=['question']),]
