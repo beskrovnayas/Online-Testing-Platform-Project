@@ -1,6 +1,7 @@
 import {BrowserRouter as Router, Routes, Route} from 'react-router-dom';
 import TestsList from './pages/TestsList';
 import TakeTest from './pages/CurrentTest';
+import TestPassing from './pages/TakeTest';
 
 
 
@@ -144,6 +145,12 @@ function App() {
           <Route 
             path = "/tests/:id"
             element = {<TakeTest />}
+          />
+
+          {/* страница прохождения теста */}
+          <Route
+            path = "/take-test/:id"
+            element = {<TestPassing />}
           />
 
         </Routes>

@@ -29,6 +29,26 @@ export interface Option {
   id: number;
   text: string;
 }
+
+export interface SubmitAnswer {
+  questionId: number;
+  optionId: number;
+}
+
+export interface TestResult {
+  correctAnswers: number;
+  totalQuestions: number;
+  percentage: number;
+}
+
+interface TestResultResponse {
+  correctAnswers?: number;
+  correct_answers?: number;
+  totalQuestions?: number;
+  total_questions?: number;
+  percentage?: number;
+  percent?: number;
+}
 // #endregion
 
 // При подружайстве бэка и фронта -- убрать
@@ -105,6 +125,12 @@ const api = axios.create({
   timeout: 10000,
 });
 
+const normalizeTestResult = (result: TestResultResponse): TestResult => ({
+  correctAnswers: result.correctAnswers ?? result.correct_answers ?? 0,
+  totalQuestions: result.totalQuestions ?? result.total_questions ?? 0,
+  percentage: result.percentage ?? result.percent ?? 0,
+});
+
 export const getTests = async (): Promise<Test[]> => {
   if (USE_MOCK) {
     await new Promise(resolve => setTimeout(resolve, 1800));
@@ -149,4 +175,41 @@ export const getTestById = async (id: number): Promise<FullTest> => {
 
   const response = await api.get(`/tests/${id}/`);
   return response.data;
+};
+
+export const submitTestAnswers = async (
+  testId: number,
+  answers: SubmitAnswer[],
+): Promise<TestResult> => {
+  if (USE_MOCK) {
+    await new Promise(resolve => setTimeout(resolve, 1200));
+
+    const correctOptionsByQuestion: Record<number, number> = {
+      101: 2,
+      102: 6,
+    };
+
+    const correctAnswers = answers.reduce((score, answer) => {
+      return correctOptionsByQuestion[answer.questionId] === answer.optionId
+        ? score + 1
+        : score;
+    }, 0);
+
+    const totalQuestions = Object.keys(correctOptionsByQuestion).length;
+
+    return {
+      correctAnswers,
+      totalQuestions,
+      percentage: Math.round((correctAnswers / totalQuestions) * 100),
+    };
+  }
+
+  const response = await api.post(`/tests/${testId}/submit/`, {
+    answers: answers.map((answer) => ({
+      question_id: answer.questionId,
+      option_id: answer.optionId,
+    })),
+  });
+
+  return normalizeTestResult(response.data);
 };

@@ -53,12 +53,8 @@ export default function TestDetail() {
 
   const handleStartTest = () => {
     if (!test) return;
-    
-    // Заглушечка пока что
-    alert(`Тест "${test.title}" начат.\n\n(Передача работы для 2 фронта)`);
-    
-    // Раскоментировать, чтобы перейти к прохождению конкретного теста
-    // navigate(`/take-test/${id}`);
+
+    navigate(`/take-test/${id}`);
   };
 
   // Экран загрузки
