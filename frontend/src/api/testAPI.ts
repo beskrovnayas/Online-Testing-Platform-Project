@@ -52,7 +52,8 @@ interface TestResultResponse {
 // #endregion
 
 // При подружайстве бэка и фронта -- убрать
-//#region MOCKи
+/*
+#region MOCKи
 const mockTests: Test[] = [
   {
     id: 1,
@@ -115,7 +116,8 @@ const mockTests: Test[] = [
     succes: 60,
   },
 ]
-//#endregion
+#endregion
+*/
 
 
 
@@ -131,17 +133,26 @@ const normalizeTestResult = (result: TestResultResponse): TestResult => ({
   percentage: result.percentage ?? result.percent ?? 0,
 });
 
+const mapTestFromApi = (apiTest: any): Test => ({
+  id: apiTest.id,
+  title: apiTest.title,
+  description: apiTest.description,
+  duration: apiTest.time_limit_minutes,
+  questionCount: apiTest.questions_count,
+});
+
 export const getTests = async (): Promise<Test[]> => {
-  if (USE_MOCK) {
-    await new Promise(resolve => setTimeout(resolve, 1800));
-    return mockTests;
-  }
+  // if (USE_MOCK) {
+  //   await new Promise(resolve => setTimeout(resolve, 1800));
+  //   return mockTests;
+  // }
 
   const response = await api.get('/tests/');
-  return response.data;
+  return response.data.map(mapTestFromApi);
 };
 
 export const getTestById = async (id: number): Promise<FullTest> => {
+  /*
   if (USE_MOCK) {
     await new Promise(resolve => setTimeout(resolve, 1600));
 
@@ -172,11 +183,29 @@ export const getTestById = async (id: number): Promise<FullTest> => {
       ]
     };
   }
+  */
 
   const response = await api.get(`/tests/${id}/`);
-  return response.data;
+  const apiTest = response.data;
+
+  return {
+    id: apiTest.id,
+    title: apiTest.title,
+    description: apiTest.description,
+    duration: apiTest.time_limit_minutes,
+    questionCount: apiTest.questions?.length ?? 0,
+    questions: (apiTest.questions || []).map((q: any) => ({
+      id: q.id,
+      text: q.text,
+      options: (q.options || []).map((opt: any) => ({
+        id: opt.id,
+        text: opt.text,
+      })),
+    })),
+  };
 };
 
+/*
 export const submitTestAnswers = async (
   testId: number,
   answers: SubmitAnswer[],
@@ -213,3 +242,4 @@ export const submitTestAnswers = async (
 
   return normalizeTestResult(response.data);
 };
+*/
