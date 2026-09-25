@@ -43,6 +43,8 @@ class TestDetailView(APIView):
     # API для получения конкретного теста с вопросами и вариантами ответов.
     # GET /api/tests/{id}/
 
+    permission_classes = [IsAuthenticated]
+
     def get(self, request, pk):
         try:
             test = (
