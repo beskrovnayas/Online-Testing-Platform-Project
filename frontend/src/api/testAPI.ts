@@ -205,7 +205,7 @@ export const getTestById = async (id: number): Promise<FullTest> => {
   };
 };
 
-/*
+
 export const submitTestAnswers = async (
   testId: number,
   answers: SubmitAnswer[],
@@ -242,4 +242,3 @@ export const submitTestAnswers = async (
 
   return normalizeTestResult(response.data);
 };
-*/
