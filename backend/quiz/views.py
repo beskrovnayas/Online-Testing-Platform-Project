@@ -1,23 +1,24 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from django.db.models import Count
-from django.utils import timezone
-from django.contrib.auth import get_user_model
-from .models import Test, TestAttempt, UserAnswer, Question, AnswerOption
-from .serializers import SubmitAnswersSerializer, TestSerializer, QuestionSerializer, AnswerOptionSerializer, TestListSerializer, TestDetailSerializer
 from rest_framework.permissions import IsAuthenticated
-from users.permissions import IsStudent, IsTeacherOrAdmin
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.exceptions import ValidationError
+from django.db.models import Count
+from django.utils import timezone
 
-User = get_user_model()
-
+from .models import Test, TestAttempt, UserAnswer, Question, AnswerOption
+from .serializers import (
+    SubmitAnswersSerializer,
+    TestSerializer,
+    QuestionSerializer,
+    AnswerOptionSerializer,
+    TestListSerializer,
+    TestDetailSerializer,
+)
+from users.permissions import IsStudent, IsTeacherOrAdmin
 
 class TestListView(APIView):
-    # API для получения списка тестов.
-    # GET /api/tests/
-
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -27,7 +28,7 @@ class TestListView(APIView):
         elif user.user_type == 'admin':
             tests = Test.objects.all()
         else:  # student
-            tests = Test.objects.all()  # пока все тесты, позже добавим is_published
+            tests = Test.objects.all()
 
         tests = (
             tests
@@ -39,9 +40,9 @@ class TestListView(APIView):
         serializer = TestListSerializer(tests, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+
 class TestDetailView(APIView):
-    # API для получения конкретного теста с вопросами и вариантами ответов.
-    # GET /api/tests/{id}/
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
         try:
@@ -60,17 +61,8 @@ class TestDetailView(APIView):
         serializer = TestDetailSerializer(test)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+
 class SubmitAnswersView(APIView):
-    # Эндпоинт для отправки ответов пользователя и получения результата.
-    # Ожидает POST-запрос с JSON:
-    # {
-    #     "test_id": 1,
-    #     "answers": {
-    #         "10": 5,
-    #         "11": 2,
-    #         ...
-    #     }
-    # }
     permission_classes = [IsAuthenticated, IsStudent]
 
     def post(self, request):
@@ -86,7 +78,7 @@ class SubmitAnswersView(APIView):
         test_id = data['test_id']
         answers_data = data['answers']
 
-        # 2. Получаем тест или возвращаем 404
+        # 2. Получаем тест
         try:
             test = Test.objects.get(id=test_id)
         except Test.DoesNotExist:
@@ -97,41 +89,52 @@ class SubmitAnswersView(APIView):
 
         user = request.user
 
-        # 4. Создаём запись о попытке прохождения теста
+        # 3. Создаём попытку прохождения
         attempt = TestAttempt.objects.create(
             user=user,
             test=test,
-            started_at=timezone.now(),          # можно также брать из request, но пока так
-            finished_at=timezone.now(),         # завершаем сразу после отправки
+            started_at=timezone.now(),
+            finished_at=timezone.now(),
             score=0.0
         )
 
-        # 5. Обрабатываем каждый ответ
+        # 4. Обрабатываем ответы
         correct_count = 0
         total_questions = test.questions.count()
+        details = []          # детальная информация по каждому вопросу
 
         for question_id_str, selected_option_id in answers_data.items():
+            # Приводим ключ к int
             try:
                 question_id = int(question_id_str)
-            except ValueError:
-                # Если ключ не число — пропускаем с логированием (можно вернуть ошибку)
+            except (ValueError, TypeError):
+                details.append({
+                    "question_id": question_id_str,
+                    "error": "Некорректный id вопроса"
+                })
                 continue
 
-            # Проверяем, существует ли вопрос и принадлежит ли он этому тесту
+            # Ищем вопрос в рамках теста
             try:
                 question = test.questions.get(id=question_id)
-            except Test.questions.model.DoesNotExist:
-                # Вопрос не найден в этом тесте — можно пропустить или вернуть ошибку
+            except Question.DoesNotExist:
+                details.append({
+                    "question_id": question_id,
+                    "error": "Вопрос не найден в этом тесте"
+                })
                 continue
 
-            # Проверяем, существует ли вариант ответа и принадлежит ли он этому вопросу
+            # Ищем вариант ответа в рамках вопроса
             try:
                 selected_option = question.options.get(id=selected_option_id)
-            except question.options.model.DoesNotExist:
-                # Неверный вариант — пропускаем вопрос (или можно вернуть ошибку)
+            except AnswerOption.DoesNotExist:
+                details.append({
+                    "question_id": question_id,
+                    "selected_option_id": selected_option_id,
+                    "error": "Вариант не найден у этого вопроса"
+                })
                 continue
 
-            # Определяем правильность ответа
             is_correct = selected_option.is_correct
             if is_correct:
                 correct_count += 1
@@ -141,36 +144,51 @@ class SubmitAnswersView(APIView):
                 attempt=attempt,
                 question=question,
                 selected_option=selected_option,
-                selected_options=[],      # для multiple choice не используется
-                text_answer='',           # для открытых вопросов не используется
+                selected_options=[],
+                text_answer='',
                 is_correct=is_correct,
                 points=1 if is_correct else 0
             )
 
-        # 6. Рассчитываем процент выполнения
+            # Ищем правильный вариант для отображения в результате
+            correct_option = question.options.filter(is_correct=True).first()
+
+            details.append({
+                "question_id": question.id,
+                "question_text": question.text,
+                "selected_option_id": selected_option.id,
+                "selected_option_text": selected_option.text,
+                "is_correct": is_correct,
+                "correct_option_id": correct_option.id if correct_option else None,
+                "correct_option_text": correct_option.text if correct_option else None,
+            })
+
+        # 5. Считаем процент
         percentage = 0
         if total_questions > 0:
             percentage = int((correct_count / total_questions) * 100)
 
-        # 7. Обновляем score попытки (процент) для истории
+        # 6. Обновляем score попытки
         attempt.score = percentage
         attempt.save(update_fields=['score'])
 
-        # 8. Возвращаем результат
+        # 7. Возвращаем результат
         return Response(
             {
                 "attempt_id": attempt.id,
+                "test_id": test.id,
+                "test_title": test.title,
                 "correct_answers": correct_count,
                 "total_questions": total_questions,
                 "percentage": percentage,
-                "message": "Тест успешно завершён"
+                "message": "Тест успешно завершён",
+                "details": details,
             },
             status=status.HTTP_200_OK
         )
 
 
 class TestViewSet(ModelViewSet):
-    # CRUD для тестов (доступен учителям и админам)
     serializer_class = TestSerializer
     permission_classes = [IsAuthenticated, IsTeacherOrAdmin]
 
@@ -185,7 +203,6 @@ class TestViewSet(ModelViewSet):
 
 
 class QuestionViewSet(ModelViewSet):
-    # CRUD для вопросов (только для своих тестов)
     serializer_class = QuestionSerializer
     permission_classes = [IsAuthenticated, IsTeacherOrAdmin]
 
@@ -203,7 +220,6 @@ class QuestionViewSet(ModelViewSet):
 
 
 class AnswerOptionViewSet(ModelViewSet):
-    # CRUD для вариантов ответа (только для своих вопросов)
     serializer_class = AnswerOptionSerializer
     permission_classes = [IsAuthenticated, IsTeacherOrAdmin]
 
