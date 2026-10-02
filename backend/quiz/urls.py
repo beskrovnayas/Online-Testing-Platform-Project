@@ -1,6 +1,14 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import TestViewSet, QuestionViewSet, AnswerOptionViewSet, SubmitAnswersView, TestListView, TestDetailView
+
+from .views import (
+    TestViewSet,
+    QuestionViewSet,
+    AnswerOptionViewSet,
+    SubmitAnswersView,
+    TestListView,
+    TestDetailView,
+)
 
 router = DefaultRouter()
 router.register(r'new_tests', TestViewSet, basename='test')

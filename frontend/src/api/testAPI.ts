@@ -1,5 +1,6 @@
 import axios from 'axios';
 import USE_MOCK from '../config';
+import { getAccessToken, refreshAccessToken, logout } from './auth';
 
 const API_BASE_URL = 'http://localhost:8000/api';
 
@@ -9,10 +10,20 @@ export interface Test {
   title: string;
   description: string;
   duration: number;
+  // difficulty/category/succes: бэкенд их не отдаёт, остаются только для моков и вёрстки
   difficulty?: 'easy' | 'medium' | 'hard' | 'Лёгкий' | 'Средний' | 'Сложный' ;
   category?: string;
   questionCount?: number;
   succes?: number;
+}
+
+interface BackendTest {
+  id: number;
+  title: string;
+  description: string;
+  time_limit: number;
+  questions_count?: number;
+  author_username?: string;
 }
 
 export interface FullTest extends Test {
@@ -22,6 +33,14 @@ export interface FullTest extends Test {
 export interface Question {
   id: number;
   text: string;
+  options: Option[];
+}
+
+interface BackendQuestion {
+  id: number;
+  text: string;
+  question_type: string;
+  order: number;
   options: Option[];
 }
 
@@ -52,8 +71,7 @@ interface TestResultResponse {
 // #endregion
 
 // При подружайстве бэка и фронта -- убрать
-/*
-#region MOCKи
+//#region MOCKи
 const mockTests: Test[] = [
   {
     id: 1,
@@ -116,8 +134,7 @@ const mockTests: Test[] = [
     succes: 60,
   },
 ]
-#endregion
-*/
+//#endregion
 
 
 
@@ -127,32 +144,57 @@ const api = axios.create({
   timeout: 10000,
 });
 
+api.interceptors.request.use((config) => {
+  const token = getAccessToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      try {
+        const newAccessToken = await refreshAccessToken();
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        return api(originalRequest);
+      } catch {
+        logout();
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 const normalizeTestResult = (result: TestResultResponse): TestResult => ({
   correctAnswers: result.correctAnswers ?? result.correct_answers ?? 0,
   totalQuestions: result.totalQuestions ?? result.total_questions ?? 0,
   percentage: result.percentage ?? result.percent ?? 0,
 });
 
-const mapTestFromApi = (apiTest: any): Test => ({
-  id: apiTest.id,
-  title: apiTest.title,
-  description: apiTest.description,
-  duration: apiTest.time_limit_minutes,
-  questionCount: apiTest.questions_count,
+const normalizeTest = (test: BackendTest): Test => ({
+  id: test.id,
+  title: test.title,
+  description: test.description,
+  duration: test.time_limit,
+  questionCount: test.questions_count,
 });
 
 export const getTests = async (): Promise<Test[]> => {
-  // if (USE_MOCK) {
-  //   await new Promise(resolve => setTimeout(resolve, 1800));
-  //   return mockTests;
-  // }
+  if (USE_MOCK) {
+    await new Promise(resolve => setTimeout(resolve, 1800));
+    return mockTests;
+  }
 
-  const response = await api.get('/tests/');
-  return response.data.map(mapTestFromApi);
+  const response = await api.get<BackendTest[]>('/tests/');
+  return response.data.map(normalizeTest);
 };
 
 export const getTestById = async (id: number): Promise<FullTest> => {
-  /*
   if (USE_MOCK) {
     await new Promise(resolve => setTimeout(resolve, 1600));
 
@@ -183,28 +225,13 @@ export const getTestById = async (id: number): Promise<FullTest> => {
       ]
     };
   }
-  */
 
-  const response = await api.get(`/tests/${id}/`);
-  const apiTest = response.data;
-
+  const response = await api.get<BackendTest & { questions: BackendQuestion[] }>(`/tests/${id}/`);
   return {
-    id: apiTest.id,
-    title: apiTest.title,
-    description: apiTest.description,
-    duration: apiTest.time_limit_minutes,
-    questionCount: apiTest.questions?.length ?? 0,
-    questions: (apiTest.questions || []).map((q: any) => ({
-      id: q.id,
-      text: q.text,
-      options: (q.options || []).map((opt: any) => ({
-        id: opt.id,
-        text: opt.text,
-      })),
-    })),
+    ...normalizeTest(response.data),
+    questions: response.data.questions.map(({ id, text, options }) => ({ id, text, options })),
   };
 };
-
 
 export const submitTestAnswers = async (
   testId: number,
@@ -233,11 +260,14 @@ export const submitTestAnswers = async (
     };
   }
 
-  const response = await api.post(`/tests/${testId}/submit/`, {
-    answers: answers.map((answer) => ({
-      question_id: answer.questionId,
-      option_id: answer.optionId,
-    })),
+  const answersDict: Record<number, number> = {};
+  answers.forEach((answer) => {
+    answersDict[answer.questionId] = answer.optionId;
+  });
+
+  const response = await api.post('/submit-answers/', {
+    test_id: testId,
+    answers: answersDict,
   });
 
   return normalizeTestResult(response.data);

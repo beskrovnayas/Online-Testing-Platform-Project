@@ -1,32 +1,24 @@
 from rest_framework import serializers
 from .models import Test, Question, AnswerOption
 
+
 class AnswerOptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = AnswerOption
-        fields = ['id', 'text']
-    
-    # def validate(self, data):
-    #     question = data.get('question')
-    #     is_correct = data.get('is_correct')
+        fields = ['id', 'question', 'text', 'is_correct']
 
-    #     if is_correct and question.question_type == 'single':
-    #         if AnswerOption.objects.filter(question=question, is_correct=True).exists():
-    #             instance = self.instance
-    #             if instance and instance.id:
-    #                 existing = AnswerOption.objects.filter(question=question, is_correct=True).exclude(id=instance.id).exists()
-    #             else:
-    #                 existing = True
-    #             if existing:
-    #                 raise serializers.ValidationError("Для вопроса с типом 'single' уже есть правильный вариант.")
-    #     return data
 
 class QuestionSerializer(serializers.ModelSerializer):
-    options = AnswerOptionSerializer(many=True, read_only=True)
-
     class Meta:
         model = Question
-        fields = ['id', 'text', 'options']
+        fields = ['id', 'test', 'text', 'question_type', 'order']
+
+
+class TestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Test
+        fields = ['id', 'title', 'description', 'time_limit', 'author']
+        read_only_fields = ['author']
 
 
 class TestListSerializer(serializers.ModelSerializer):
@@ -46,7 +38,7 @@ class TestListSerializer(serializers.ModelSerializer):
 
 
 class TestDetailSerializer(serializers.ModelSerializer):
-    questions = QuestionSerializer(many=True, read_only=True)
+    questions = serializers.SerializerMethodField()
     author_username = serializers.CharField(source='author.username', read_only=True)
 
     class Meta:
@@ -60,6 +52,23 @@ class TestDetailSerializer(serializers.ModelSerializer):
             'questions',
         ]
 
+    def get_questions(self, obj):
+        result = []
+        for question in obj.questions.all().order_by('order', 'id'):
+            options = [
+                {'id': opt.id, 'text': opt.text}
+                for opt in question.options.all()
+            ]
+            result.append({
+                'id': question.id,
+                'text': question.text,
+                'question_type': question.question_type,
+                'order': question.order,
+                'options': options,
+            })
+        return result
+
+
 class SubmitAnswersSerializer(serializers.Serializer):
     test_id = serializers.IntegerField()
     answers = serializers.DictField(
@@ -67,19 +76,7 @@ class SubmitAnswersSerializer(serializers.Serializer):
         help_text="Словарь {question_id: selected_option_id}"
     )
 
-
-class TestSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Test
-        fields = ['id', 'title', 'description', 'time_limit', 'author']
-        read_only_fields = ['author']
-
-class QuestionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Question
-        fields = ['id', 'test', 'text', 'question_type', 'order']
-
-class AnswerOptionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = AnswerOption
-        fields = ['id', 'question', 'text', 'is_correct']
+    def validate_answers(self, value):
+        if not value:
+            raise serializers.ValidationError("Список ответов не может быть пустым.")
+        return value

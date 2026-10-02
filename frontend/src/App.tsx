@@ -136,7 +136,7 @@ function App() {
           />
 
           {/* страница со списком тестов */}
-          <Route 
+          <Route
             path = "/tests"
             element = {<TestsList />}
           />
