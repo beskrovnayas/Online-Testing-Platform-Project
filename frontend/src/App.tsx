@@ -2,7 +2,6 @@ import {BrowserRouter as Router, Routes, Route} from 'react-router-dom';
 import TestsList from './pages/TestsList';
 import TakeTest from './pages/CurrentTest';
 import TestPassing from './pages/TakeTest';
-import Login from './pages/Login';
 
 
 
@@ -134,12 +133,6 @@ function App() {
                 <p>{new Date().getFullYear()} СПбГУ МКН СП 1 курс</p>                  </footer>
               </div>
             }
-          />
-
-          {/* страница входа */}
-          <Route
-            path = "/login"
-            element = {<Login />}
           />
 
           {/* страница со списком тестов */}
