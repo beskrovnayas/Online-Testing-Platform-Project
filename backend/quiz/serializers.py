@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Test, Question, AnswerOption
+from .models import Test, Question, AnswerOption, TestAttempt
 
 
 class AnswerOptionSerializer(serializers.ModelSerializer):
@@ -68,6 +68,20 @@ class TestDetailSerializer(serializers.ModelSerializer):
             })
         return result
 
+class TestAttemptHistorySerializer(serializers.ModelSerializer):
+    test_id = serializers.IntegerField(source='test.id', read_only=True)
+    test_title = serializers.CharField(source='test.title', read_only=True)
+
+    class Meta:
+        model = TestAttempt
+        fields = [
+            'id',
+            'test_id',
+            'test_title',
+            'score',
+            'started_at',
+            'finished_at',
+        ]
 
 class SubmitAnswersSerializer(serializers.Serializer):
     test_id = serializers.IntegerField()
