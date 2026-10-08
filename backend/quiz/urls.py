@@ -8,6 +8,8 @@ from .views import (
     SubmitAnswersView,
     TestListView,
     TestDetailView,
+    TestAttemptListView,
+    TestAttemptDetailView,
 )
 
 router = DefaultRouter()
@@ -20,4 +22,6 @@ urlpatterns = [
     path('tests/', TestListView.as_view(), name='test-list'),
     path('tests/<int:pk>/', TestDetailView.as_view(), name='test-detail'),
     path('submit-answers/', SubmitAnswersView.as_view(), name='submit-answers'),
+    path('attempts/', TestAttemptListView.as_view(), name='attempt-list'),
+    path('attempts/<int:pk>/', TestAttemptDetailView.as_view(), name='attempt-detail'),
 ]

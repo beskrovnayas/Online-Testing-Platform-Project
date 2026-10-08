@@ -15,6 +15,8 @@ from .serializers import (
     AnswerOptionSerializer,
     TestListSerializer,
     TestDetailSerializer,
+    TestAttemptHistorySerializer,
+    TestAttemptDetailSerializer,
 )
 from users.permissions import IsStudent, IsTeacherOrAdmin
 
@@ -188,6 +190,41 @@ class SubmitAnswersView(APIView):
             },
             status=status.HTTP_200_OK
         )
+
+
+class TestAttemptListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        attempts = (
+            TestAttempt.objects
+            .filter(user=request.user)
+            .select_related('test')
+            .order_by('-started_at')
+        )
+        serializer = TestAttemptHistorySerializer(attempts, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class TestAttemptDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        try:
+            attempt = (
+                TestAttempt.objects
+                .select_related('test')
+                .prefetch_related('user_answers__question__options', 'user_answers__selected_option')
+                .get(pk=pk, user=request.user)
+            )
+        except TestAttempt.DoesNotExist:
+            return Response(
+                {"error": "Попытка не найдена"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = TestAttemptDetailSerializer(attempt)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class TestViewSet(ModelViewSet):

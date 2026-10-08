@@ -83,6 +83,51 @@ class TestAttemptHistorySerializer(serializers.ModelSerializer):
             'finished_at',
         ]
 
+class TestAttemptDetailSerializer(serializers.ModelSerializer):
+    attempt_id = serializers.IntegerField(source='id', read_only=True)
+    test_id = serializers.IntegerField(source='test.id', read_only=True)
+    test_title = serializers.CharField(source='test.title', read_only=True)
+    percentage = serializers.FloatField(source='score', read_only=True)
+    total_questions = serializers.SerializerMethodField()
+    correct_answers = serializers.SerializerMethodField()
+    details = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TestAttempt
+        fields = [
+            'attempt_id',
+            'test_id',
+            'test_title',
+            'correct_answers',
+            'total_questions',
+            'percentage',
+            'started_at',
+            'finished_at',
+            'details',
+        ]
+
+    def get_total_questions(self, obj):
+        return obj.test.questions.count()
+
+    def get_correct_answers(self, obj):
+        return obj.user_answers.filter(is_correct=True).count()
+
+    def get_details(self, obj):
+        result = []
+        for answer in obj.user_answers.select_related('question', 'selected_option').all():
+            correct_option = answer.question.options.filter(is_correct=True).first()
+            result.append({
+                'question_id': answer.question.id,
+                'question_text': answer.question.text,
+                'selected_option_id': answer.selected_option.id if answer.selected_option else None,
+                'selected_option_text': answer.selected_option.text if answer.selected_option else None,
+                'correct_option_id': correct_option.id if correct_option else None,
+                'correct_option_text': correct_option.text if correct_option else None,
+                'is_correct': answer.is_correct,
+            })
+        return result
+
+
 class SubmitAnswersSerializer(serializers.Serializer):
     test_id = serializers.IntegerField()
     answers = serializers.DictField(
