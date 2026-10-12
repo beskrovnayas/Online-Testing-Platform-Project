@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 class Test(models.Model): # модель теста
     title = models.CharField(max_length=200, verbose_name="Название теста")
     description = models.TextField(blank=True, verbose_name="Описание")
+    is_published = models.BooleanField(default=False, verbose_name="Опубликован")
     time_limit = models.IntegerField(default=30, verbose_name="Время на прохождение (мин)")
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
