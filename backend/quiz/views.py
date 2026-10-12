@@ -30,7 +30,7 @@ class TestListView(APIView):
         elif user.user_type == 'admin':
             tests = Test.objects.all()
         else:  # student
-            tests = Test.objects.all()
+            tests = Test.objects.filter(is_published=True)
 
         tests = (
             tests
