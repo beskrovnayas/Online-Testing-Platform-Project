@@ -17,8 +17,8 @@ class QuestionSerializer(serializers.ModelSerializer):
 class TestSerializer(serializers.ModelSerializer):
     class Meta:
         model = Test
-        fields = ['id', 'title', 'description', 'time_limit', 'author']
-        read_only_fields = ['author']
+        fields = ['id', 'title', 'description', 'time_limit', 'author', 'is_published']
+        read_only_fields = ['author', 'is_published']
 
 
 class TestListSerializer(serializers.ModelSerializer):

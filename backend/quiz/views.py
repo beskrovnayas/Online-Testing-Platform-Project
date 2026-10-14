@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import ModelViewSet
+from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from django.db.models import Count
 from django.utils import timezone
@@ -239,6 +240,20 @@ class TestViewSet(ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def publish(self, request, pk=None):
+        test = self.get_object()
+        test.is_published = True
+        test.save(update_fields=['is_published'])
+        return Response(TestSerializer(test).data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'])
+    def unpublish(self, request, pk=None):
+        test = self.get_object()
+        test.is_published = False
+        test.save(update_fields=['is_published'])
+        return Response(TestSerializer(test).data, status=status.HTTP_200_OK)
 
 
 class QuestionViewSet(ModelViewSet):
