@@ -131,8 +131,8 @@ class TestAttemptDetailSerializer(serializers.ModelSerializer):
 class SubmitAnswersSerializer(serializers.Serializer):
     test_id = serializers.IntegerField()
     answers = serializers.DictField(
-        child=serializers.IntegerField(),
-        help_text="Словарь {question_id: selected_option_id}"
+        child=serializers.JSONField(),
+        help_text="Словарь {question_id: selected_option_id или [selected_option_id, ...] для вопросов с несколькими ответами}"
     )
 
     def validate_answers(self, value):
