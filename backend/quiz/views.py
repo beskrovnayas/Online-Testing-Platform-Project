@@ -108,7 +108,7 @@ class SubmitAnswersView(APIView):
         total_questions = test.questions.count()
         details = []          # детальная информация по каждому вопросу
 
-        for question_id_str, selected_option_id in answers_data.items():
+        for question_id_str, selected_value in answers_data.items():
             # Приводим ключ к int
             try:
                 question_id = int(question_id_str)
@@ -126,6 +126,71 @@ class SubmitAnswersView(APIView):
                 details.append({
                     "question_id": question_id,
                     "error": "Вопрос не найден в этом тесте"
+                })
+                continue
+
+            if question.question_type == 'multiple':
+                # Для вопросов с несколькими ответами ждём список id вариантов
+                selected_ids = selected_value if isinstance(selected_value, list) else [selected_value]
+                try:
+                    selected_ids = [int(option_id) for option_id in selected_ids]
+                except (ValueError, TypeError):
+                    details.append({
+                        "question_id": question_id,
+                        "error": "Некорректный вариант ответа"
+                    })
+                    continue
+
+                selected_options = list(question.options.filter(id__in=selected_ids))
+                if len(selected_options) != len(set(selected_ids)):
+                    details.append({
+                        "question_id": question_id,
+                        "selected_option_ids": selected_ids,
+                        "error": "Вариант не найден у этого вопроса"
+                    })
+                    continue
+
+                correct_options = list(question.options.filter(is_correct=True))
+                is_correct = set(selected_ids) == {option.id for option in correct_options}
+                if is_correct:
+                    correct_count += 1
+
+                # Сохраняем ответ пользователя
+                UserAnswer.objects.create(
+                    attempt=attempt,
+                    question=question,
+                    selected_option=None,
+                    selected_options=selected_ids,
+                    text_answer='',
+                    is_correct=is_correct,
+                    points=1 if is_correct else 0
+                )
+
+                details.append({
+                    "question_id": question.id,
+                    "question_text": question.text,
+                    "selected_option_ids": [option.id for option in selected_options],
+                    "selected_option_texts": [option.text for option in selected_options],
+                    "is_correct": is_correct,
+                    "correct_option_ids": [option.id for option in correct_options],
+                    "correct_option_texts": [option.text for option in correct_options],
+                })
+                continue
+
+            # Вопрос с одним правильным ответом (как было раньше)
+            if isinstance(selected_value, list):
+                details.append({
+                    "question_id": question_id,
+                    "error": "Для этого вопроса можно выбрать только один вариант"
+                })
+                continue
+
+            try:
+                selected_option_id = int(selected_value)
+            except (ValueError, TypeError):
+                details.append({
+                    "question_id": question_id,
+                    "error": "Некорректный вариант ответа"
                 })
                 continue
 
