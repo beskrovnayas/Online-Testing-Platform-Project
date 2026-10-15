@@ -41,9 +41,20 @@ class AnswerOption(models.Model): # модель варианта ответа
         return self.text[:50]
     
     def clean(self):
-        if self.is_correct and self.question:
-            correct_answer_already_exists = AnswerOption.objects.filter(question=self.question, is_correct=True).exclude(id=self.id).exists()
-            if correct_answer_already_exists: raise ValidationError("Для этого вопроса уже выбран правильный вариант ответа")
+        if (
+            self.is_correct
+            and self.question
+            and self.question.question_type == 'single'
+        ):
+            correct_answer_already_exists = AnswerOption.objects.filter(
+                question=self.question,
+                is_correct=True
+            ).exclude(id=self.id).exists()
+
+            if correct_answer_already_exists:
+                raise ValidationError(
+                    "Для этого вопроса уже выбран правильный вариант ответа"
+                )
     
     def save(self, *args, **kwargs):
         self.clean()
