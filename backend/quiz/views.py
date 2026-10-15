@@ -92,6 +92,12 @@ class SubmitAnswersView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+        if not test.is_published:
+            return Response(
+                {"error": "Тест не опубликован"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
         user = request.user
 
         # 3. Создаём попытку прохождения
