@@ -121,15 +121,42 @@ export default function TestsList() {
   return (
     <div className="min-h-screen bg-gray-50 py-10">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        <div className = "mb-10">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Доступные тесты
-          </h1>
-          <p className="text-gray-600 mb-10 text-lg">
+        <div className="mb-10">
+          <div className="flex items-center justify-between gap-4 mb-2">
+
+            <h1 className="text-4xl font-bold text-gray-900">
+              Доступные тесты
+            </h1>
+
+            <button
+              onClick={() => navigate('/attempts')}
+              className="shrink-0 text-sm sm:text-base bg-white border border-blue-200 text-blue-700 hover:bg-blue-50 font-medium px-4 py-2 rounded-xl transition-colors"
+            >
+              Мои прохождения
+            </button>
+
+            <button
+              onClick={() => {
+                const ok = window.confirm(
+                  'позже: в зависимости от роли зашедшего -- своя страница профиля. пока что есть только страница препода'
+                );
+                if (ok) {
+                  navigate('/teacher');
+                }
+              }}
+              className="text-sm sm:text-base bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium px-4 py-2 rounded-xl transition-colors"
+            >
+              Профиль
+            </button>
+
+          </div>
+
+          <p className="text-gray-600 text-lg">
             Выберите тест для прохождения
           </p>
-        </div>
 
+        </div>
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 xl:gap-10">
         {tests.map((test) => (
           <TestCard
