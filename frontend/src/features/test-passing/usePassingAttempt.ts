@@ -3,6 +3,7 @@ import { getPassingTest, startAttempt, submitPassingAnswers, type AttemptTiming,
 import { PassingError, remainingMilliseconds, type AttemptResult, type SelectedAnswers } from './protocol';
 import { readAttempt, saveAttempt } from './session';
 
+
 const failure = (reason: unknown) => reason instanceof PassingError
   ? reason : new PassingError('network', 'Не удалось связаться с сервером. Попробуйте снова.');
 
@@ -137,7 +138,7 @@ export default function usePassingAttempt(testId: number) {
   }, [timing, closed, result, submit]);
 
   return {
-    test, answers, result, loading, submitting, error, submitError, validationError, expired, closed,
+    test, answers, result, loading, submitting, error, submitError, validationError, expired, closed, expiresAt: timing?.expiresAt ?? null,
     selectAnswer, submit, retryLoad: () => setRevision((value) => value + 1),
   };
 }

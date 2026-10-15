@@ -3,8 +3,10 @@ import TestsList from './pages/TestsList';
 import TakeTest from './pages/CurrentTest';
 import TestPassing from './pages/TakeTest';
 import Login from './pages/Login';
-
-
+import MyAttempts from './pages/Attempts';
+import TeacherTests from './pages/TeacherTests';
+import TeacherCreateTest from './pages/TeacherCreateTest';
+import TeacherHome from './pages/TeacherHome';
 
 function App() {
   return (
@@ -16,9 +18,28 @@ function App() {
             path="/" 
               element = {
                 <div className="min-h-screen bg-gray-50">
+
+                  {/* Шапка */}
+                  <header className="absolute top-0 left-0 right-0 z-10">
+                    <div className="max-w-5xl mx-auto px-6 py-5 flex justify-end gap-3">
+                      <a
+                        href="/login"
+                        className="text-sm font-medium px-4 py-2 rounded-xl text-white/90 hover:text-white hover:bg-white/10 transition-colors"
+                      >
+                        Войти
+                      </a>
+                      <a
+                        href="/login"
+                        // пока что обе ведут на одно и то же, но будем править в будущем
+                        className="text-sm font-medium px-4 py-2 rounded-xl bg-white text-blue-700 hover:bg-blue-50 transition-colors"
+                      >
+                        Регистрация
+                      </a>
+                    </div>
+                  </header>
                   
                   {/*Главная секция*/}
-                  <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white py-24">
+                  <div className="relative bg-gradient-to-br from-blue-600 to-indigo-700 text-white py-24">
                     <div className="max-w-5xl mx-auto px-6 text-center">
                       <h1 className="text-5xl lg:text-6xl font-bold mb-6 leading-tight">
                         Система для проведения<br/>тестов
@@ -157,6 +178,17 @@ function App() {
 
           {/* страница логина */}
           <Route path="/login" element={<Login />}/>
+
+          {/* страница препода, профиль*/}
+          <Route path="/teacher" element={<TeacherHome />} />
+          <Route path="/teachers" element={<TeacherHome />} /> {/* алиас? */}
+
+          {/* страница преподавателя для создания теста*/}
+          <Route path="/teacher/tests" element={<TeacherTests />} />
+          <Route path="/teacher/tests/create" element={<TeacherCreateTest />} />
+
+          {/* страница историй прохождений */}
+          <Route path="/attempts" element={<MyAttempts />}/>
 
         </Routes>
       </div>

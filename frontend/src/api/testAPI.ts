@@ -70,74 +70,6 @@ interface TestResultResponse {
 }
 // #endregion
 
-// При подружайстве бэка и фронта -- убрать
-//#region MOCKи
-const mockTests: Test[] = [
-  {
-    id: 1,
-    title: "тест 1",
-    description: "описание теста 1",
-    duration: 2,
-    difficulty: "easy",
-    category: "Химия",
-    questionCount: 2,
-    succes: 100,
-  },
-  {
-    id: 2,
-    title: "тест 2",
-    description: "описание теста 2",
-    duration: 4,
-    difficulty: "medium",
-    category: "Программирование",
-    questionCount: 4,
-    succes: 70,
-  },
-  {
-    id: 3,
-    title: "тест 3",
-    description: "описание теста 3",
-    duration: 8,
-    difficulty: "hard",
-    category: "История",
-    questionCount: 8,
-    succes: 50,
-  },
-  {
-    id: 4,
-    title: "тест 4",
-    description: "описание теста 4",
-    duration: 16,
-    difficulty: "easy",
-    category: "Программирование",
-    questionCount: 16,
-    succes: 60,
-  },
-  {
-    id: 5,
-    title: "тест 5",
-    description: "описание теста 5",
-    duration: 32,
-    difficulty: "medium",
-    category: "История",
-    questionCount: 32,
-    succes: 78,
-  },
-  {
-    id: 6,
-    title: "тест 6",
-    description: "описание теста 6",
-    duration: 64,
-    difficulty: "hard",
-    category: "Программирование",
-    questionCount: 64,
-    succes: 60,
-  },
-]
-//#endregion
-
-
-
 // функции для API
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -271,4 +203,101 @@ export const submitTestAnswers = async (
   });
 
   return normalizeTestResult(response.data);
+};
+
+// mock для тестирования списков прохождений
+//#region 
+export interface TestAttemptItem {
+  id: number;
+  testId: number;
+  testTitle: string;
+  startedAt: string;
+  finishedAt: string | null;
+  score: number | null;
+}
+
+const mockAttempts: TestAttemptItem[] = [
+  {
+    id: 1,
+    testId: 1,
+    testTitle: "Тест по Python",
+    startedAt: "2026-10-08T14:30:00Z",
+    finishedAt: "2026-10-08T14:45:00Z",
+    score: 80,
+  },
+  {
+    id: 2,
+    testId: 1,
+    testTitle: "Тест по Python",
+    startedAt: "2026-10-07T10:00:00Z",
+    finishedAt: "2026-10-07T10:18:00Z",
+    score: 50,
+  },
+  {
+    id: 3,
+    testId: 2,
+    testTitle: "Тест по Django",
+    startedAt: "2026-10-05T18:20:00Z",
+    finishedAt: "2026-10-05T18:40:00Z",
+    score: 100,
+  },
+  {
+    id: 4,
+    testId: 3,
+    testTitle: "Основы алгоритмов",
+    startedAt: "2026-10-04T09:15:00Z",
+    finishedAt: "2026-10-04T09:40:00Z",
+    score: 65,
+  },
+  {
+    id: 5,
+    testId: 1,
+    testTitle: "Тест по Python",
+    startedAt: "2026-10-03T16:00:00Z",
+    finishedAt: "2026-10-03T16:12:00Z",
+    score: 90,
+  },
+  {
+    id: 6,
+    testId: 4,
+    testTitle: "SQL и базы данных",
+    startedAt: "2026-10-02T11:30:00Z",
+    finishedAt: "2026-10-02T12:05:00Z",
+    score: 40,
+  },
+  {
+    id: 7,
+    testId: 2,
+    testTitle: "Тест по Django",
+    startedAt: "2026-10-01T20:10:00Z",
+    finishedAt: null,
+    score: null,
+  },
+  {
+    id: 8,
+    testId: 5,
+    testTitle: "Git для начинающих",
+    startedAt: "2026-09-28T13:00:00Z",
+    finishedAt: "2026-09-28T13:25:00Z",
+    score: 75,
+  },
+];
+//#endregion
+
+export const getMyAttempts = async (): Promise<TestAttemptItem[]> => {
+  const response = await api.get('/attempts/');
+
+  const rows = Array.isArray(response.data)
+    ? response.data
+    : response.data?.results ?? [];
+
+  return rows
+    .map((item: any) => ({
+      id: item.id,
+      testId: item.test?.id ?? item.test_id,
+      testTitle: item.test?.title ?? item.test_title ?? 'Тест',
+      startedAt: item.started_at,
+      finishedAt: item.finished_at,
+      score: item.score ?? item.percentage ?? null,
+    })).filter((a: TestAttemptItem) => a.finishedAt !== null);
 };
