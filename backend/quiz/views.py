@@ -114,60 +114,82 @@ class SubmitAnswersView(APIView):
         total_questions = test.questions.count()
         details = []          # детальная информация по каждому вопросу
 
-        for question_id_str, selected_value in answers_data.items():
-            # Приводим ключ к int
+        for question_id_str, user_input in answers_data.items():
             try:
                 question_id = int(question_id_str)
             except (ValueError, TypeError):
-                details.append({
-                    "question_id": question_id_str,
-                    "error": "Некорректный id вопроса"
-                })
+                details.append({"question_id": question_id_str, "error": "Некорректный id"})
                 continue
 
-            # Ищем вопрос в рамках теста
             try:
                 question = test.questions.get(id=question_id)
             except Question.DoesNotExist:
-                details.append({
-                    "question_id": question_id,
-                    "error": "Вопрос не найден в этом тесте"
-                })
+                details.append({"question_id": question_id, "error": "Вопрос не в этом тесте"})
                 continue
 
-            if question.question_type == 'multiple':
-                # Для вопросов с несколькими ответами ждём список id вариантов
-                selected_ids = selected_value if isinstance(selected_value, list) else [selected_value]
+            # ---------- SINGLE ----------
+            if question.question_type == 'single':
+                if not isinstance(user_input, int):
+                    details.append({"question_id": question_id, "error": "Ожидался один вариант"})
+                    continue
                 try:
-                    selected_ids = [int(option_id) for option_id in selected_ids]
-                except (ValueError, TypeError):
-                    details.append({
-                        "question_id": question_id,
-                        "error": "Некорректный вариант ответа"
-                    })
+                    selected_option = question.options.get(id=user_input)
+                except AnswerOption.DoesNotExist:
+                    details.append({"question_id": question_id, "error": "Вариант не найден"})
                     continue
 
-                selected_options = list(question.options.filter(id__in=selected_ids))
-                if len(selected_options) != len(set(selected_ids)):
-                    details.append({
-                        "question_id": question_id,
-                        "selected_option_ids": selected_ids,
-                        "error": "Вариант не найден у этого вопроса"
-                    })
-                    continue
-
-                correct_options = list(question.options.filter(is_correct=True))
-                is_correct = set(selected_ids) == {option.id for option in correct_options}
+                is_correct = selected_option.is_correct
                 if is_correct:
                     correct_count += 1
 
-                # Сохраняем ответ пользователя
+                UserAnswer.objects.create(
+                    attempt=attempt,
+                    question=question,
+                    selected_option=selected_option,
+                    selected_options=[],
+                    is_correct=is_correct,
+                    points=1 if is_correct else 0
+                )
+
+                correct_option = question.options.filter(is_correct=True).first()
+                details.append({
+                    "question_id": question.id,
+                    "question_text": question.text,
+                    "question_type": "single",
+                    "selected_option_ids": [selected_option.id],
+                    "selected_option_texts": [selected_option.text],
+                    "is_correct": is_correct,
+                    "correct_option_ids": [correct_option.id] if correct_option else [],
+                    "correct_option_texts": [correct_option.text] if correct_option else [],
+                })
+
+            # ---------- MULTIPLE ----------
+            elif question.question_type == 'multiple':
+                if not isinstance(user_input, list):
+                    details.append({"question_id": question_id, "error": "Ожидался список вариантов"})
+                    continue
+
+                selected_ids = set(user_input)
+                all_option_ids = set(question.options.values_list('id', flat=True))
+                if not selected_ids.issubset(all_option_ids):
+                    details.append({"question_id": question_id, "error": "Есть чужой вариант"})
+                    continue
+
+                correct_ids = set(
+                    question.options.filter(is_correct=True).values_list('id', flat=True)
+                )
+                is_correct = selected_ids == correct_ids
+                if is_correct:
+                    correct_count += 1
+
+                selected_options = list(question.options.filter(id__in=selected_ids))
+                correct_options = list(question.options.filter(is_correct=True))
+
                 UserAnswer.objects.create(
                     attempt=attempt,
                     question=question,
                     selected_option=None,
-                    selected_options=selected_ids,
-                    text_answer='',
+                    selected_options=list(selected_ids),
                     is_correct=is_correct,
                     points=1 if is_correct else 0
                 )
@@ -175,69 +197,18 @@ class SubmitAnswersView(APIView):
                 details.append({
                     "question_id": question.id,
                     "question_text": question.text,
-                    "selected_option_ids": [option.id for option in selected_options],
-                    "selected_option_texts": [option.text for option in selected_options],
+                    "question_type": "multiple",
+                    "selected_option_ids": [o.id for o in selected_options],
+                    "selected_option_texts": [o.text for o in selected_options],
                     "is_correct": is_correct,
-                    "correct_option_ids": [option.id for option in correct_options],
-                    "correct_option_texts": [option.text for option in correct_options],
+                    "correct_option_ids": [o.id for o in correct_options],
+                    "correct_option_texts": [o.text for o in correct_options],
                 })
+
+            else:
+                # text — оставляем на другой спринт
+                details.append({"question_id": question_id, "error": "Тип вопроса не поддержан"})
                 continue
-
-            # Вопрос с одним правильным ответом (как было раньше)
-            if isinstance(selected_value, list):
-                details.append({
-                    "question_id": question_id,
-                    "error": "Для этого вопроса можно выбрать только один вариант"
-                })
-                continue
-
-            try:
-                selected_option_id = int(selected_value)
-            except (ValueError, TypeError):
-                details.append({
-                    "question_id": question_id,
-                    "error": "Некорректный вариант ответа"
-                })
-                continue
-
-            # Ищем вариант ответа в рамках вопроса
-            try:
-                selected_option = question.options.get(id=selected_option_id)
-            except AnswerOption.DoesNotExist:
-                details.append({
-                    "question_id": question_id,
-                    "selected_option_id": selected_option_id,
-                    "error": "Вариант не найден у этого вопроса"
-                })
-                continue
-
-            is_correct = selected_option.is_correct
-            if is_correct:
-                correct_count += 1
-
-            # Сохраняем ответ пользователя
-            UserAnswer.objects.create(
-                attempt=attempt,
-                question=question,
-                selected_option=selected_option,
-                selected_options=[],
-                text_answer='',
-                is_correct=is_correct,
-                points=1 if is_correct else 0
-            )
-
-            # Ищем правильный вариант для отображения в результате
-            correct_option = question.options.filter(is_correct=True).first()
-
-            details.append({
-                "question_id": question.id,
-                "question_text": question.text,
-                "selected_option_id": selected_option.id,
-                "selected_option_text": selected_option.text,
-                "is_correct": is_correct,
-                "correct_option_id": correct_option.id if correct_option else None,
-                "correct_option_text": correct_option.text if correct_option else None,
-            })
 
         # 5. Считаем процент
         percentage = 0

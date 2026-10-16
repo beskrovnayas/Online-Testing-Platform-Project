@@ -130,12 +130,17 @@ class TestAttemptDetailSerializer(serializers.ModelSerializer):
 
 class SubmitAnswersSerializer(serializers.Serializer):
     test_id = serializers.IntegerField()
-    answers = serializers.DictField(
-        child=serializers.JSONField(),
-        help_text="Словарь {question_id: selected_option_id или [selected_option_id, ...] для вопросов с несколькими ответами}"
-    )
+    answers = serializers.DictField(help_text="Словарь {question_id: id | [id, ...]}")
 
     def validate_answers(self, value):
         if not value:
             raise serializers.ValidationError("Список ответов не может быть пустым.")
+        for qid, ans in value.items():
+            if isinstance(ans, int):
+                continue
+            if isinstance(ans, list) and all(isinstance(x, int) for x in ans):
+                continue
+            raise serializers.ValidationError(
+                f"Ответ для вопроса {qid} должен быть int или list[int]"
+            )
         return value
