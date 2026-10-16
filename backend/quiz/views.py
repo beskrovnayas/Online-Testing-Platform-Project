@@ -1,3 +1,4 @@
+from datetime import timedelta
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -66,6 +67,45 @@ class TestDetailView(APIView):
         serializer = TestDetailSerializer(test)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+class StartAttemptView(APIView):
+    permission_classes = [IsAuthenticated, IsStudent]
+
+    def post(self, request, pk):
+        try:
+            test = Test.objects.get(pk=pk)
+        except Test.DoesNotExist:
+            return Response(
+                {"error": "Тест не найден"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        if not test.is_published:
+            return Response(
+                {"error": "Тест не опубликован"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        now = timezone.now()
+
+        attempt = TestAttempt.objects.create(
+            user=request.user,
+            test=test,
+            started_at=now,
+            finished_at=None,
+            score=0
+        )
+
+        expires_at = now + timedelta(minutes=test.time_limit)
+
+        return Response(
+            {
+                "attempt_id": attempt.id,
+                "started_at": now.isoformat(),
+                "expires_at": expires_at.isoformat(),
+                "server_now": now.isoformat(),
+            },
+            status=status.HTTP_201_CREATED
+        )
 
 class SubmitAnswersView(APIView):
     permission_classes = [IsAuthenticated, IsStudent]
@@ -81,6 +121,7 @@ class SubmitAnswersView(APIView):
 
         data = serializer.validated_data
         test_id = data['test_id']
+        attempt_id = data['attempt_id']
         answers_data = data['answers']
 
         # 2. Получаем тест
@@ -100,14 +141,45 @@ class SubmitAnswersView(APIView):
 
         user = request.user
 
-        # 3. Создаём попытку прохождения
-        attempt = TestAttempt.objects.create(
-            user=user,
-            test=test,
-            started_at=timezone.now(),
-            finished_at=timezone.now(),
-            score=0.0
-        )
+        # 3. Получаем уже начатую попытку
+        try:
+            attempt = TestAttempt.objects.get(
+                id=attempt_id,
+                user=user,
+                test=test,
+            )
+        except TestAttempt.DoesNotExist:
+            return Response(
+                {
+                    "error": "Попытка не найдена",
+                    "code": "attempt_not_found",
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        if attempt.finished_at is not None:
+            return Response(
+                {
+                    "error": "Попытка уже завершена",
+                    "code": "attempt_finished",
+                },
+                status=status.HTTP_409_CONFLICT
+            )
+
+        now = timezone.now()
+        expires_at = attempt.started_at + timedelta(minutes=test.time_limit)
+
+        if now >= expires_at:
+            attempt.finished_at = now
+            attempt.save(update_fields=['finished_at'])
+
+            return Response(
+                {
+                    "error": "Время прохождения теста истекло",
+                    "code": "time_expired",
+                },
+                status=status.HTTP_408_REQUEST_TIMEOUT
+            )
 
         # 4. Обрабатываем ответы
         correct_count = 0
@@ -217,7 +289,8 @@ class SubmitAnswersView(APIView):
 
         # 6. Обновляем score попытки
         attempt.score = percentage
-        attempt.save(update_fields=['score'])
+        attempt.finished_at = timezone.now()
+        attempt.save(update_fields=['score', 'finished_at'])
 
         # 7. Возвращаем результат
         return Response(
