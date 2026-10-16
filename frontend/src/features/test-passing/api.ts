@@ -84,8 +84,9 @@ export async function getPassingTest(id: number): Promise<PassingTest> {
 }
 
 export async function startAttempt(test: PassingTest): Promise<AttemptTiming> {
-  const path = import.meta.env.VITE_TEST_START_PATH as string | undefined;
-  if (!path) return { expiresAt: Date.now() + test.duration * 60000, source: 'browser' };
+  const path =
+  (import.meta.env.VITE_TEST_START_PATH as string | undefined)
+  ?? '/tests/{id}/start/';
   const { data } = await client.post(path.replace('{id}', String(test.id)), {});
   if (!Number.isSafeInteger(data.attempt_id) || data.attempt_id <= 0 || typeof data.expires_at !== 'string') {
     throw new PassingError('validation', 'Сервер не вернул номер попытки и время её завершения.');

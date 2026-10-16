@@ -130,6 +130,7 @@ class TestAttemptDetailSerializer(serializers.ModelSerializer):
 
 class SubmitAnswersSerializer(serializers.Serializer):
     test_id = serializers.IntegerField()
+    attempt_id = serializers.IntegerField()
     answers = serializers.DictField(help_text="Словарь {question_id: id | [id, ...]}")
 
     def validate_answers(self, value):
