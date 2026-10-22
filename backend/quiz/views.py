@@ -20,6 +20,7 @@ from .serializers import (
     TestAttemptHistorySerializer,
     TestAttemptDetailSerializer,
 )
+from users.models import CustomUser
 from users.permissions import IsStudent, IsTeacherOrAdmin
 
 class TestListView(APIView):
@@ -32,7 +33,7 @@ class TestListView(APIView):
         elif user.user_type == 'admin':
             tests = Test.objects.all()
         else:  # student
-            tests = Test.objects.filter(is_published=True)
+            tests = Test.objects.filter(is_published=True).exclude(hidden_for=user)
 
         tests = (
             tests
@@ -82,6 +83,12 @@ class StartAttemptView(APIView):
         if not test.is_published:
             return Response(
                 {"error": "Тест не опубликован"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        if test.hidden_for.filter(pk=request.user.pk).exists():
+            return Response(
+                {"error": "Тест недоступен"},
                 status=status.HTTP_403_FORBIDDEN
             )
 
@@ -136,6 +143,12 @@ class SubmitAnswersView(APIView):
         if not test.is_published:
             return Response(
                 {"error": "Тест не опубликован"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        if test.hidden_for.filter(pk=request.user.pk).exists():
+            return Response(
+                {"error": "Тест недоступен"},
                 status=status.HTTP_403_FORBIDDEN
             )
 
@@ -368,6 +381,26 @@ class TestViewSet(ModelViewSet):
         test = self.get_object()
         test.is_published = False
         test.save(update_fields=['is_published'])
+        return Response(TestSerializer(test).data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], url_path='hide-for')
+    def hide_for(self, request, pk=None):
+        test = self.get_object()
+        try:
+            target = CustomUser.objects.get(pk=request.data.get('user_id'))
+        except (CustomUser.DoesNotExist, ValueError, TypeError):
+            return Response({"error": "Пользователь не найден"}, status=status.HTTP_404_NOT_FOUND)
+        test.hidden_for.add(target)
+        return Response(TestSerializer(test).data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], url_path='unhide-for')
+    def unhide_for(self, request, pk=None):
+        test = self.get_object()
+        try:
+            target = CustomUser.objects.get(pk=request.data.get('user_id'))
+        except (CustomUser.DoesNotExist, ValueError, TypeError):
+            return Response({"error": "Пользователь не найден"}, status=status.HTTP_404_NOT_FOUND)
+        test.hidden_for.remove(target)
         return Response(TestSerializer(test).data, status=status.HTTP_200_OK)
 
 

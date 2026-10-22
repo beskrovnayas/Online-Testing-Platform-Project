@@ -7,6 +7,12 @@ class Test(models.Model): # модель теста
     title = models.CharField(max_length=200, verbose_name="Название теста")
     description = models.TextField(blank=True, verbose_name="Описание")
     is_published = models.BooleanField(default=False, verbose_name="Опубликован")
+    hidden_for = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        blank=True,
+        related_name='hidden_tests',
+        verbose_name="Скрыт от пользователей"
+    )
     time_limit = models.IntegerField(default=30, verbose_name="Время на прохождение (мин)")
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
