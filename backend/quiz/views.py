@@ -6,7 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
-from django.db.models import Count
+from django.db.models import Count, Avg, Max
 from django.utils import timezone
 
 from .models import Test, TestAttempt, UserAnswer, Question, AnswerOption
@@ -19,6 +19,7 @@ from .serializers import (
     TestDetailSerializer,
     TestAttemptHistorySerializer,
     TestAttemptDetailSerializer,
+    AttemptStatsSerializer,
 )
 from users.models import CustomUser
 from users.permissions import IsStudent, IsTeacherOrAdmin
@@ -332,6 +333,26 @@ class TestAttemptListView(APIView):
             .order_by('-started_at')
         )
         serializer = TestAttemptHistorySerializer(attempts, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AttemptStatsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        attempts = TestAttempt.objects.filter(user=request.user)
+        aggregates = attempts.aggregate(
+            attempts_total=Count('id'),
+            tests_attempted=Count('test', distinct=True),
+            average_score=Avg('score'),
+            best_score=Max('score'),
+        )
+        serializer = AttemptStatsSerializer({
+            'attempts_total': aggregates['attempts_total'],
+            'tests_attempted': aggregates['tests_attempted'],
+            'average_score': aggregates['average_score'] or 0,
+            'best_score': aggregates['best_score'] or 0,
+        })
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 

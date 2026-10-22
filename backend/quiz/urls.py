@@ -11,6 +11,7 @@ from .views import (
     TestDetailView,
     TestAttemptListView,
     TestAttemptDetailView,
+    AttemptStatsView,
 )
 
 router = DefaultRouter()
@@ -25,5 +26,6 @@ urlpatterns = [
     path('tests/<int:pk>/start/', StartAttemptView.as_view(), name='test-start'),
     path('submit-answers/', SubmitAnswersView.as_view(), name='submit-answers'),
     path('attempts/', TestAttemptListView.as_view(), name='attempt-list'),
+    path('attempts/stats/', AttemptStatsView.as_view(), name='attempt-stats'),
     path('attempts/<int:pk>/', TestAttemptDetailView.as_view(), name='attempt-detail'),
 ]

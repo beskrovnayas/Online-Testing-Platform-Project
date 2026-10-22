@@ -130,6 +130,13 @@ class TestAttemptDetailSerializer(serializers.ModelSerializer):
         return result
 
 
+class AttemptStatsSerializer(serializers.Serializer):
+    attempts_total = serializers.IntegerField()
+    tests_attempted = serializers.IntegerField()
+    average_score = serializers.FloatField()
+    best_score = serializers.FloatField()
+
+
 class SubmitAnswersSerializer(serializers.Serializer):
     test_id = serializers.IntegerField()
     attempt_id = serializers.IntegerField()
