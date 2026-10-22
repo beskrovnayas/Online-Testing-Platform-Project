@@ -15,10 +15,12 @@ class QuestionSerializer(serializers.ModelSerializer):
 
 
 class TestSerializer(serializers.ModelSerializer):
+    hidden_for = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+
     class Meta:
         model = Test
-        fields = ['id', 'title', 'description', 'time_limit', 'author', 'is_published']
-        read_only_fields = ['author', 'is_published']
+        fields = ['id', 'title', 'description', 'time_limit', 'author', 'is_published', 'hidden_for']
+        read_only_fields = ['author', 'is_published', 'hidden_for']
 
 
 class TestListSerializer(serializers.ModelSerializer):

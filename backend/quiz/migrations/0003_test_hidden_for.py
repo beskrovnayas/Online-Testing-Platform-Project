@@ -1,0 +1,18 @@
+from django.conf import settings
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('quiz', '0002_test_is_published'),
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name='test',
+            name='hidden_for',
+            field=models.ManyToManyField(blank=True, related_name='hidden_tests', to=settings.AUTH_USER_MODEL, verbose_name='Скрыт от пользователей'),
+        ),
+    ]

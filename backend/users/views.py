@@ -1,8 +1,10 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-from .serializers import UserRegistrationSerializer
-from rest_framework.permissions import AllowAny
+from .models import CustomUser
+from .serializers import UserRegistrationSerializer, StudentSerializer
+from .permissions import IsTeacherOrAdmin
+from rest_framework.permissions import AllowAny, IsAuthenticated
 
 class UserRegistrationView(generics.CreateAPIView):
     permission_classes = [AllowAny]
@@ -23,3 +25,9 @@ class UserRegistrationView(generics.CreateAPIView):
             'refresh': str(refresh),
             'access': str(refresh.access_token),
         }, status=status.HTTP_201_CREATED)
+
+
+class StudentListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated, IsTeacherOrAdmin]
+    serializer_class = StudentSerializer
+    queryset = CustomUser.objects.filter(user_type='student').order_by('username')

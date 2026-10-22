@@ -42,6 +42,12 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return user
 
 
+class StudentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ['id', 'username', 'email']
+
+
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
