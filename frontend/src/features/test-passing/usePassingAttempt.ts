@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getPassingTest, startAttempt, submitPassingAnswers, type AttemptTiming, type PassingTest } from './api';
 import { PassingError, remainingMilliseconds, type AttemptResult, type SelectedAnswers } from './protocol';
-import { readAttempt, saveAttempt } from './session';
+import { useNavigate } from 'react-router-dom';
+import { clearAttempt, readAttempt, saveAttempt } from './session';
 
 
 const failure = (reason: unknown) => reason instanceof PassingError
   ? reason : new PassingError('network', 'Не удалось связаться с сервером. Попробуйте снова.');
 
 export default function usePassingAttempt(testId: number) {
+  const navifate = useNavigate();
   const [test, setTest] = useState<PassingTest | null>(null);
   const [timing, setTiming] = useState<AttemptTiming | null>(null);
   const [answers, setAnswers] = useState<SelectedAnswers>({});
@@ -100,7 +102,12 @@ export default function usePassingAttempt(testId: number) {
       if (!active.current) return;
       setResult(data);
       setClosed(true);
-      saveAttempt(testId, { timing, answers, closed: true, result: data, expired: timedOut });
+      if (data.attemptId !== undefined) {
+        clearAttempt(testId);
+        navifate(`/attempt/${data.attemptId}/done`, { replace: true });
+      } else {
+        saveAttempt(testId, { timing, answers, closed: true, result: data, expired: timedOut });
+      }
     } catch (reason) {
       if (!active.current) return;
       const issue = failure(reason);
@@ -116,7 +123,7 @@ export default function usePassingAttempt(testId: number) {
       inFlight.current = false;
       if (active.current) setSubmitting(false);
     }
-  }, [test, timing, answers, closed, result, testId]);
+  }, [test, timing, answers, closed, result, testId, navifate]);
 
   useEffect(() => {
     if (!timing || closed || result) return;

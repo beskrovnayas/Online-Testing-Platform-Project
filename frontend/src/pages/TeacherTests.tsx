@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import ManagedTestsList from '../components/ManagedTestsList';
 
 export default function TeacherTests() {
   const navigate = useNavigate();
@@ -31,9 +32,7 @@ export default function TeacherTests() {
           </button>
         </div>
 
-        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 text-center text-gray-500">
-          Позже: писок тестов и публикация (переключатель)
-        </div>
+        <ManagedTestsList />
       </div>
     </div>
   );

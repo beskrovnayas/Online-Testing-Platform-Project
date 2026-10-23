@@ -70,13 +70,24 @@ export default function TeacherHome() {
                 </button>
                 </div>
 
-                <button
-                    type="button"
-                    onClick={() => navigate('/teacher/tests/create')}
-                    className="w-full rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-6 text-lg transition-colors"
-                >
-                    Создать тест
-                </button>
+                <div className="space-y-3">
+                    <button
+                        type="button"
+                        onClick={() => navigate('/teacher/tests/create')}
+                        className="w-full rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-6 text-lg transition-colors"
+                    >
+                        Создать тест
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => navigate('/teacher/tests')}
+                        className="w-full rounded-2xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 font-semibold py-4 px-6 text-lg transition-colors"
+                    >
+                        Управление тестами
+                    </button>
+                </div>
+                
             </div>
             </div>
         </div>

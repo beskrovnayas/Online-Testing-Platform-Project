@@ -3,10 +3,15 @@ import TestsList from './pages/TestsList';
 import TakeTest from './pages/CurrentTest';
 import TestPassing from './pages/TakeTest';
 import Login from './pages/Login';
-import MyAttempts from './pages/Attempts';
+
 import TeacherTests from './pages/TeacherTests';
 import TeacherCreateTest from './pages/TeacherCreateTest';
 import TeacherHome from './pages/TeacherHome';
+
+import MyStats from './pages/MyStats';
+
+import AttemptDone from './pages/AttemptDone';
+import AttemptReview from './pages/AttemptReview';
 
 function App() {
   return (
@@ -187,8 +192,12 @@ function App() {
           <Route path="/teacher/tests" element={<TeacherTests />} />
           <Route path="/teacher/tests/create" element={<TeacherCreateTest />} />
 
-          {/* страница историй прохождений */}
-          <Route path="/attempts" element={<MyAttempts />}/>
+          {/* страница статистики ученика (история прохождений, средний и лучший результат) */}
+          <Route path="/stats" element={<MyStats />} />
+
+          {/* страницы для результатов прохождения теста */}
+          <Route path="/attempt/:id/done" element={<AttemptDone />} />
+          <Route path="/attempt/:id/review" element={<AttemptReview />} />
 
         </Routes>
       </div>
