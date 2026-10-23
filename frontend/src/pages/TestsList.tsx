@@ -129,7 +129,7 @@ export default function TestsList() {
             </h1>
 
             <button
-              onClick={() => navigate('/attempts')}
+              onClick={() => navigate('/stats')}
               className="shrink-0 text-sm sm:text-base bg-white border border-blue-200 text-blue-700 hover:bg-blue-50 font-medium px-4 py-2 rounded-xl transition-colors"
             >
               Мои прохождения
