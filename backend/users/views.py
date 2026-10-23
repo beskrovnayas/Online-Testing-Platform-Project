@@ -2,7 +2,7 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import CustomUser
-from .serializers import UserRegistrationSerializer, StudentSerializer
+from .serializers import UserRegistrationSerializer, StudentSerializer, ProfileSerializer
 from .permissions import IsTeacherOrAdmin
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
@@ -31,3 +31,11 @@ class StudentListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated, IsTeacherOrAdmin]
     serializer_class = StudentSerializer
     queryset = CustomUser.objects.filter(user_type='student').order_by('username')
+
+
+class ProfileView(generics.RetrieveAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ProfileSerializer
+
+    def get_object(self):
+        return self.request.user
