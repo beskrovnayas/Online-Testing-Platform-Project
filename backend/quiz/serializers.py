@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Test, Question, AnswerOption, TestAttempt
+from .models import Test, Question, AnswerOption, TestAttempt, ProctorEvent
 
 
 class AnswerOptionSerializer(serializers.ModelSerializer):
@@ -154,3 +154,9 @@ class SubmitAnswersSerializer(serializers.Serializer):
                 f"Ответ для вопроса {qid} должен быть int или list[int]"
             )
         return value
+
+class ProctorEventSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProctorEvent
+        fields = ['id', 'attempt', 'event_type', 'timestamp', 'details']
+        read_only_fields = ['timestamp']

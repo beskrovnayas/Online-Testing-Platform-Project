@@ -9,7 +9,7 @@ from rest_framework.exceptions import ValidationError
 from django.db.models import Count, Avg, Max
 from django.utils import timezone
 
-from .models import Test, TestAttempt, UserAnswer, Question, AnswerOption
+from .models import Test, TestAttempt, UserAnswer, Question, AnswerOption, ProctorEvent
 from .serializers import (
     SubmitAnswersSerializer,
     TestSerializer,
@@ -457,3 +457,52 @@ class AnswerOptionViewSet(ModelViewSet):
         if self.request.user.user_type != 'admin' and question.test.author != self.request.user:
             raise ValidationError("Можно добавлять варианты только к своим вопросам.")
         serializer.save()
+
+class ProctorEventView(APIView):
+    """
+    POST /api/proctor/event/
+    Принимает события прокторинга от фронтенда:
+    {
+        "attempt_id": 7,
+        "event_type": "copy_attempt",
+        "details": {"selected_text": "..."}
+    }
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        attempt_id = request.data.get('attempt_id')
+        event_type = request.data.get('event_type')
+        details = request.data.get('details', {})
+
+        if not attempt_id or not event_type:
+            return Response(
+                {"error": "attempt_id и event_type обязательны"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        valid_types = [t[0] for t in ProctorEvent.EVENT_TYPES]
+        if event_type not in valid_types:
+            return Response(
+                {"error": f"Недопустимый event_type. Доступные: {valid_types}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            attempt = TestAttempt.objects.get(id=attempt_id, user=request.user)
+        except TestAttempt.DoesNotExist:
+            return Response(
+                {"error": "Попытка не найдена или принадлежит другому пользователю"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        event = ProctorEvent.objects.create(
+            attempt=attempt,
+            event_type=event_type,
+            details=details
+        )
+
+        return Response(
+            {"id": event.id, "status": "ok"},
+            status=status.HTTP_201_CREATED
+        )

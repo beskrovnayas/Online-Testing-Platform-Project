@@ -172,3 +172,30 @@ class UserAnswer(models.Model): # модель ответа пользовате
         ordering = ['id']
         constraints = [models.UniqueConstraint(fields=['attempt', 'question'], name='unique_answer_per_question_attempt')]
         indexes = [models.Index(fields=['attempt']), models.Index(fields=['question']),]
+
+class ProctorEvent(models.Model):
+    EVENT_TYPES = (
+        ('exit_attempt', 'Попытка выхода'),
+        ('copy_attempt', 'Попытка копирования'),
+        ('cut_attempt', 'Попытка вырезания'),
+        ('context_menu', 'Открытие контекстного меню'),
+    )
+    attempt = models.ForeignKey(
+        TestAttempt,
+        on_delete=models.CASCADE,
+        related_name='proctor_events',
+        verbose_name="Попытка"
+    )
+    event_type = models.CharField(
+        max_length=50, choices=EVENT_TYPES, verbose_name="Тип события"
+    )
+    timestamp = models.DateTimeField(auto_now_add=True, verbose_name="Время")
+    details = models.JSONField(default=dict, blank=True, verbose_name="Детали")
+
+    def __str__(self):
+        return f"{self.event_type} | попытка #{self.attempt.id}"
+
+    class Meta:
+        ordering = ['-timestamp']
+        verbose_name = "Прокторинг-событие"
+        verbose_name_plural = "Прокторинг-события"
