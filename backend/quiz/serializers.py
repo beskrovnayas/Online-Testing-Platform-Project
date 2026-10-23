@@ -117,16 +117,31 @@ class TestAttemptDetailSerializer(serializers.ModelSerializer):
     def get_details(self, obj):
         result = []
         for answer in obj.user_answers.select_related('question', 'selected_option').all():
-            correct_option = answer.question.options.filter(is_correct=True).first()
-            result.append({
-                'question_id': answer.question.id,
-                'question_text': answer.question.text,
-                'selected_option_id': answer.selected_option.id if answer.selected_option else None,
-                'selected_option_text': answer.selected_option.text if answer.selected_option else None,
-                'correct_option_id': correct_option.id if correct_option else None,
-                'correct_option_text': correct_option.text if correct_option else None,
-                'is_correct': answer.is_correct,
-            })
+            options = {opt.id: opt for opt in answer.question.options.all()}
+
+            if answer.question.question_type == 'multiple':
+                selected_ids = list(answer.selected_options)
+                correct_ids = [opt.id for opt in options.values() if opt.is_correct]
+                result.append({
+                    'question_id': answer.question.id,
+                    'question_text': answer.question.text,
+                    'selected_option_ids': selected_ids,
+                    'selected_option_texts': [options[i].text for i in selected_ids if i in options],
+                    'correct_option_ids': correct_ids,
+                    'correct_option_texts': [options[i].text for i in correct_ids],
+                    'is_correct': answer.is_correct,
+                })
+            else:
+                correct_option = next((opt for opt in options.values() if opt.is_correct), None)
+                result.append({
+                    'question_id': answer.question.id,
+                    'question_text': answer.question.text,
+                    'selected_option_id': answer.selected_option.id if answer.selected_option else None,
+                    'selected_option_text': answer.selected_option.text if answer.selected_option else None,
+                    'correct_option_id': correct_option.id if correct_option else None,
+                    'correct_option_text': correct_option.text if correct_option else None,
+                    'is_correct': answer.is_correct,
+                })
         return result
 
 
