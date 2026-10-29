@@ -13,12 +13,15 @@ from .views import (
     TestAttemptDetailView,
     AttemptStatsView,
     ProctorEventView,
+    TestGroupViewSet,
+    GlobalRankingView,
 )
 
 router = DefaultRouter()
 router.register(r'new_tests', TestViewSet, basename='test')
 router.register(r'questions', QuestionViewSet, basename='question')
 router.register(r'answer-options', AnswerOptionViewSet, basename='answer-option')
+router.register(r'test-groups', TestGroupViewSet, basename='test-group')
 
 urlpatterns = [
     path('', include(router.urls)),
@@ -30,4 +33,5 @@ urlpatterns = [
     path('attempts/stats/', AttemptStatsView.as_view(), name='attempt-stats'),
     path('attempts/<int:pk>/', TestAttemptDetailView.as_view(), name='attempt-detail'),
     path('proctor/event/', ProctorEventView.as_view(), name='proctor-event'),
+    path('stats/ranking/', GlobalRankingView.as_view(), name='global-ranking'),
 ]
