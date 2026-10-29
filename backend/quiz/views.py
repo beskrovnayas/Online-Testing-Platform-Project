@@ -9,7 +9,7 @@ from rest_framework.exceptions import ValidationError
 from django.db.models import Count, Avg, Max
 from django.utils import timezone
 
-from .models import Test, TestAttempt, UserAnswer, Question, AnswerOption, ProctorEvent
+from .models import Test, TestAttempt, UserAnswer, Question, AnswerOption, ProctorEvent, TestGroup
 from .serializers import (
     SubmitAnswersSerializer,
     TestSerializer,
@@ -20,9 +20,54 @@ from .serializers import (
     TestAttemptHistorySerializer,
     TestAttemptDetailSerializer,
     AttemptStatsSerializer,
+    TestGroupSerializer,
+    ParticipantRankingSerializer,
 )
 from users.models import CustomUser
 from users.permissions import IsStudent, IsTeacherOrAdmin
+
+
+def build_ranking(test_ids):
+    """
+    Рейтинг всех участников (студентов) по списку тестов: средний из лучших
+    результатов по каждому пройденному тесту из списка. Студенты без попыток
+    тоже попадают в список (average_score=None), но без места в рейтинге.
+    """
+    tests_total = len(test_ids)
+    students = CustomUser.objects.filter(user_type='student').order_by('username')
+
+    attempts = (
+        TestAttempt.objects
+        .filter(test_id__in=test_ids, finished_at__isnull=False)
+        .values('user_id', 'test_id')
+        .annotate(best_score=Max('score'))
+    )
+    per_user_test = {}
+    for row in attempts:
+        per_user_test.setdefault(row['user_id'], {})[row['test_id']] = row['best_score']
+
+    data = []
+    for student in students:
+        scores = per_user_test.get(student.id, {})
+        tests_completed = len(scores)
+        average_score = sum(scores.values()) / tests_completed if tests_completed else None
+        data.append({
+            'user_id': student.id,
+            'username': student.username,
+            'average_score': average_score,
+            'tests_completed': tests_completed,
+            'tests_total': tests_total,
+        })
+
+    data.sort(key=lambda d: (d['average_score'] is None, -(d['average_score'] or 0), d['username']))
+    rank = 0
+    for d in data:
+        if d['average_score'] is not None:
+            rank += 1
+            d['rank'] = rank
+        else:
+            d['rank'] = None
+    return data
 
 class TestListView(APIView):
     permission_classes = [IsAuthenticated]
@@ -423,6 +468,49 @@ class TestViewSet(ModelViewSet):
             return Response({"error": "Пользователь не найден"}, status=status.HTTP_404_NOT_FOUND)
         test.hidden_for.remove(target)
         return Response(TestSerializer(test).data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['get'])
+    def ranking(self, request, pk=None):
+        test = self.get_object()
+        data = build_ranking([test.id])
+        serializer = ParticipantRankingSerializer(data, many=True)
+        return Response(serializer.data)
+
+
+class TestGroupViewSet(ModelViewSet):
+    serializer_class = TestGroupSerializer
+    permission_classes = [IsAuthenticated, IsTeacherOrAdmin]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.user_type == 'admin':
+            return TestGroup.objects.all()
+        return TestGroup.objects.filter(author=user)
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
+
+    @action(detail=True, methods=['get'])
+    def ranking(self, request, pk=None):
+        group = self.get_object()
+        test_ids = list(group.tests.values_list('id', flat=True))
+        data = build_ranking(test_ids)
+        serializer = ParticipantRankingSerializer(data, many=True)
+        return Response(serializer.data)
+
+
+class GlobalRankingView(APIView):
+    permission_classes = [IsAuthenticated, IsTeacherOrAdmin]
+
+    def get(self, request):
+        user = request.user
+        if user.user_type == 'admin':
+            test_ids = list(Test.objects.values_list('id', flat=True))
+        else:
+            test_ids = list(Test.objects.filter(author=user).values_list('id', flat=True))
+        data = build_ranking(test_ids)
+        serializer = ParticipantRankingSerializer(data, many=True)
+        return Response(serializer.data)
 
 
 class QuestionViewSet(ModelViewSet):

@@ -199,3 +199,23 @@ class ProctorEvent(models.Model):
         ordering = ['-timestamp']
         verbose_name = "Прокторинг-событие"
         verbose_name_plural = "Прокторинг-события"
+
+
+class TestGroup(models.Model):  # группа тестов для сводного рейтинга
+    name = models.CharField(max_length=255, verbose_name="Название")
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='test_groups',
+        verbose_name="Автор"
+    )
+    tests = models.ManyToManyField(Test, related_name='groups', blank=True, verbose_name="Тесты")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Создана")
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Группа тестов"
+        verbose_name_plural = "Группы тестов"

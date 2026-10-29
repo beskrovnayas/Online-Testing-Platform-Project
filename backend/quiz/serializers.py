@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Test, Question, AnswerOption, TestAttempt, ProctorEvent
+from .models import Test, Question, AnswerOption, TestAttempt, TestGroup, ProctorEvent
 
 
 class AnswerOptionSerializer(serializers.ModelSerializer):
@@ -150,6 +150,22 @@ class AttemptStatsSerializer(serializers.Serializer):
     tests_attempted = serializers.IntegerField()
     average_score = serializers.FloatField()
     best_score = serializers.FloatField()
+
+
+class TestGroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TestGroup
+        fields = ['id', 'name', 'author', 'tests', 'created_at']
+        read_only_fields = ['author', 'created_at']
+
+
+class ParticipantRankingSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField()
+    username = serializers.CharField()
+    average_score = serializers.FloatField(allow_null=True)
+    tests_completed = serializers.IntegerField()
+    tests_total = serializers.IntegerField()
+    rank = serializers.IntegerField(allow_null=True)
 
 
 class SubmitAnswersSerializer(serializers.Serializer):
