@@ -1,4 +1,5 @@
 import {BrowserRouter as Router, Routes, Route} from 'react-router-dom';
+
 import TestsList from './pages/TestsList';
 import TakeTest from './pages/CurrentTest';
 import TestPassing from './pages/TakeTest';
@@ -12,6 +13,20 @@ import MyStats from './pages/MyStats';
 
 import AttemptDone from './pages/AttemptDone';
 import AttemptReview from './pages/AttemptReview';
+
+import { Navigate } from 'react-router-dom';
+import ProfilePage from './pages/ProfilePage';
+import RequireRole from './components/RequireRole';
+
+import ProctorGuard from './components/ProctorGuard';
+
+import TeacherRanking from './pages/TeacherRanking';
+
+import ProfileEdit from './pages/ProfileEdit';
+import CreateTestChoice from './pages/CreateTestChoice';
+import CreateTestFromPdf from './pages/CreateTestFromPdf';
+
+
 
 function App() {
   return (
@@ -67,6 +82,7 @@ function App() {
                       <h2 className="text-4xl font-bold text-gray-900 mb-4">О системе</h2>
                       <p className="text-xl text-gray-600 max-w-3xl mx-auto">
                         Описание системы: какая она?
+
                       </p>
                     </div>
 
@@ -118,14 +134,14 @@ function App() {
                         {/*<div className="text-4xl"></div>*/}
                         <div>
                           <h3 className="text-xl font-semibold mb-2">1 преимущество</h3>
-                          <p className="text-gray-600">Описание</p>
+                          <p className="text-gray-600">Мы старались</p>
                         </div>
                       </div>
                       <div className="flex gap-5">
                         {/*<div className="text-4xl"></div>*/}
                         <div>
                           <h3 className="text-xl font-semibold mb-2">2 преимущество</h3>
-                          <p className="text-gray-600">Описание</p>
+                          <p className="text-gray-600">Тут все минималистично</p>
                         </div>
                       </div>
                     </div>
@@ -141,15 +157,22 @@ function App() {
                       <div>
                         <h3 className="text-2xl font-semibold mb-6">Команда "☆"</h3>
                         <div className="space-y-4 text-left max-w-sm mx-auto">
-                          <p>- 2 фронтенд-разработчика</p>
-                          <p>- 2 бэкенд-разработчика</p>
-                        <p>- 1 специалист по БД</p>
+                          <p>- 2 фронтенд-разработчика:
+                            Бескровная Софья Борисовна, Лаухин Максим Денисович и Подуременных Семен Алексеевич
+                          </p>
+                          <p>- 2 бэкенд-разработчика:
+                            Коваль Александра Витальевна и Новиков Денис
+                          </p>
+                        <p>- 1 специалист по БД:
+                          Бессонов Егор Алексеевич
+                        </p>
                       </div>
                     </div>
-
                       <div>
                         <h3 className="text-2xl font-semibold mb-6">Ментор проекта</h3>
-                        <p className="text-xl">Н</p>
+                        <p className="text-xl">
+                          Дубчук Николай Павлович
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -176,29 +199,34 @@ function App() {
           />
 
           {/* страница прохождения теста */}
-          <Route
-            path = "/take-test/:id"
-            element = {<TestPassing />}
-          />
+          <Route path = "/take-test/:id" element = {<ProctorGuard><TestPassing /></ProctorGuard>}/>
 
           {/* страница логина */}
           <Route path="/login" element={<Login />}/>
 
           {/* страница препода, профиль*/}
-          <Route path="/teacher" element={<TeacherHome />} />
-          <Route path="/teachers" element={<TeacherHome />} /> {/* алиас? */}
+          <Route path="/profile" element={<RequireRole><ProfilePage /></RequireRole>} />
+          <Route path="/teacher" element={<Navigate to="/profile" replace />}/>
+          <Route path="/teachers" element={<Navigate to="/profile" replace />}/>
+
+          <Route path="/profile/edit" element={<RequireRole><ProfileEdit /></RequireRole>}/>
 
           {/* страница преподавателя для создания теста*/}
-          <Route path="/teacher/tests" element={<TeacherTests />} />
-          <Route path="/teacher/tests/create" element={<TeacherCreateTest />} />
+          <Route path="/teacher/tests" element={<RequireRole roles={['teacher', 'admin']}><TeacherTests /></RequireRole>}/>
+          <Route path="/teacher/tests/create" element={<RequireRole roles={['teacher', 'admin']}><TeacherCreateTest /></RequireRole>}/>
+          
+          <Route path="/teacher/tests/new" element={<RequireRole roles={['teacher', 'admin']}><CreateTestChoice /></RequireRole>}/>
+          <Route path="/teacher/tests/create-from-pdf" element={<RequireRole roles={['teacher', 'admin']}><CreateTestFromPdf /></RequireRole>}/>
 
           {/* страница статистики ученика (история прохождений, средний и лучший результат) */}
-          <Route path="/stats" element={<MyStats />} />
+          <Route path="/stats" element={<RequireRole roles={['student']}><MyStats /></RequireRole>} />
 
-          {/* страницы для результатов прохождения теста */}
-          <Route path="/attempt/:id/done" element={<AttemptDone />} />
-          <Route path="/attempt/:id/review" element={<AttemptReview />} />
+          {/* страницы для результатов прохождения теста */}      
+          <Route path="/attempt/:id/done" element={<RequireRole roles={['student']}><AttemptDone /></RequireRole>} />
+          <Route path="/attempt/:id/review" element={<RequireRole roles={['student']}><AttemptReview /></RequireRole>} />
 
+          {/* рейтинги учеников в тестах */}
+          <Route path="/teacher/ranking" element={<RequireRole roles={['teacher', 'admin']}><TeacherRanking /></RequireRole>} />
         </Routes>
       </div>
     </Router>

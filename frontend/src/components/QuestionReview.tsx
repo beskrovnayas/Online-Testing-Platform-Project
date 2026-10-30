@@ -13,8 +13,8 @@ type OptionState = 'right' | 'wrong' | 'missed' | 'plain';
 interface OptionStyle {
   box: string;
   mark: string;
-  tag: string;
-  tagClass: string;
+  // подпись только для скринридеров оставим, а на экране цвет и рамка говорят сами за себя
+  srLabel: string;
 }
 
 interface Props {
@@ -37,18 +37,19 @@ export default function QuestionReview({ question, index }: Props) {
     return 'plain';
   };
 
+  // пропущенный правильный вариант: жёлтый в частично верном вопросе, иначе зелёный пунктиром
   const styleOf = (state: OptionState): OptionStyle => {
     switch (state) {
       case 'right':
-        return { box: 'border-emerald-500 bg-emerald-50', mark: 'text-emerald-600', tag: 'Верно', tagClass: 'text-emerald-700' };
+        return { box: 'border-emerald-500 bg-emerald-50', mark: 'text-emerald-600', srLabel: 'Верно' };
       case 'wrong':
-        return { box: 'border-red-400 bg-red-50', mark: 'text-red-600', tag: 'Неверно', tagClass: 'text-red-700' };
+        return { box: 'border-red-400 bg-red-50', mark: 'text-red-600', srLabel: 'Неверно' };
       case 'missed':
         return verdict === 'partial'
-          ? { box: 'border-amber-400 border-dashed bg-amber-50', mark: 'text-amber-500', tag: 'Правильный ответ', tagClass: 'text-amber-700' }
-          : { box: 'border-emerald-500 border-dashed bg-emerald-50', mark: 'text-emerald-600', tag: 'Правильный ответ', tagClass: 'text-emerald-700' };
+          ? { box: 'border-amber-400 border-dashed bg-amber-50', mark: 'text-amber-500', srLabel: 'Правильный ответ' }
+          : { box: 'border-emerald-500 border-dashed bg-emerald-50', mark: 'text-emerald-600', srLabel: 'Правильный ответ' };
       default:
-        return { box: 'border-gray-200 bg-white', mark: 'text-gray-400', tag: '', tagClass: '' };
+        return { box: 'border-gray-200 bg-white', mark: 'text-gray-400', srLabel: '' };
     }
   };
 
@@ -91,7 +92,7 @@ export default function QuestionReview({ question, index }: Props) {
                 {selected && <span className={`h-2.5 w-2.5 bg-current ${multiple ? 'rounded-sm' : 'rounded-full'}`} />}
               </span>
               <span className="flex-1 text-gray-800 leading-relaxed">{option.text}</span>
-              {style.tag && <span className={`shrink-0 text-sm font-medium ${style.tagClass}`}>{style.tag}</span>}
+              {style.srLabel && <span className="sr-only">{style.srLabel}</span>}
             </div>
           );
         })}

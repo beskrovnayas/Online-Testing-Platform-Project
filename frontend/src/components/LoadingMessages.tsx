@@ -25,7 +25,7 @@ export const emptyStateMessages = {
 // Дополнительно для страницы конкреного теста
 export const testDetailMessages = {
   loading: "Загружаем информацию о тесте...",
-  backToList: "<— Вернуться к списку тестов",
+  backToList: "← Вернуться к списку тестов",
   startTest: "Начать тест",
   duration: "мин",
 } as const;

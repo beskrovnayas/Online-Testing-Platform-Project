@@ -86,7 +86,7 @@ export default function TestDetail() {
             onClick={() => navigate('/tests')}
             className="bg-blue-600 text-white px-6 py-3 rounded-2xl hover:bg-blue-700"
           >
-            Вернуться к списку тестов
+            ← К списку тестов 
           </button>
         </div>
       </div>
