@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 from django.core.exceptions import ValidationError
+from django.db.models import Avg, F, ExpressionWrapper, DurationField
 
 class Test(models.Model): # модель теста
     title = models.CharField(max_length=200, verbose_name="Название теста")
@@ -25,6 +26,20 @@ class Test(models.Model): # модель теста
 
     def __str__(self):
         return self.title
+
+    def get_average_duration_seconds(self):
+        completed_attempts = self.attempts.filter(finished_at__isnull=False)
+        
+        if not completed_attempts.exists():
+            return None
+            
+        avg_duration = completed_attempts.annotate(
+            duration=ExpressionWrapper(F('finished_at') - F('started_at'), output_field=DurationField())
+        ).aggregate(avg=Avg('duration'))['avg']
+
+        if avg_duration:
+            return int(avg_duration.total_seconds())
+        return None
 
     class Meta:
         ordering = ['-id']

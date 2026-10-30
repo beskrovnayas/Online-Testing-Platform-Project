@@ -351,7 +351,21 @@ class SubmitAnswersView(APIView):
         attempt.finished_at = timezone.now()
         attempt.save(update_fields=['score', 'finished_at'])
 
-        # 7. Возвращаем результат
+        attempt_duration_seconds = int((attempt.finished_at - attempt.started_at).total_seconds())
+    
+        # 7. Считаем время
+        average_duration_seconds = test.get_average_duration_seconds()
+
+        time_comparison = "unknown"
+        if average_duration_seconds is not None:
+            if attempt_duration_seconds < average_duration_seconds:
+                time_comparison = "faster"
+            elif attempt_duration_seconds > average_duration_seconds:
+                time_comparison = "slower"
+            else:
+                time_comparison = "equal"
+
+        # 8. Возвращаем результат
         return Response(
             {
                 "attempt_id": attempt.id,
@@ -362,6 +376,10 @@ class SubmitAnswersView(APIView):
                 "percentage": percentage,
                 "message": "Тест успешно завершён",
                 "details": details,
+
+                "attempt_time_seconds": attempt_duration_seconds,
+                "average_test_time_seconds": average_duration_seconds,
+                "time_comparison": time_comparison  # "faster", "slower" или "equal"
             },
             status=status.HTTP_200_OK
         )

@@ -42,6 +42,7 @@ class TestListSerializer(serializers.ModelSerializer):
 class TestDetailSerializer(serializers.ModelSerializer):
     questions = serializers.SerializerMethodField()
     author_username = serializers.CharField(source='author.username', read_only=True)
+    average_duration_seconds = serializers.SerializerMethodField()
 
     class Meta:
         model = Test
@@ -52,6 +53,7 @@ class TestDetailSerializer(serializers.ModelSerializer):
             'time_limit',
             'author_username',
             'questions',
+            'average_duration_seconds',
         ]
 
     def get_questions(self, obj):
@@ -69,6 +71,9 @@ class TestDetailSerializer(serializers.ModelSerializer):
                 'options': options,
             })
         return result
+
+    def get_average_duration_seconds(self, obj):
+        return obj.get_average_duration_seconds()
 
 class TestAttemptHistorySerializer(serializers.ModelSerializer):
     test_id = serializers.IntegerField(source='test.id', read_only=True)
