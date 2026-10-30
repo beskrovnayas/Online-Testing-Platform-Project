@@ -33,7 +33,7 @@ export default function AttemptDone() {
           onClick={() => navigate('/tests')}
           className="w-full mt-3 bg-white border border-gray-200 text-gray-700 font-medium py-3 rounded-2xl hover:bg-gray-50"
         >
-          К списку тестов
+          ← К списку тестов
         </button>
       </div>
     </div>

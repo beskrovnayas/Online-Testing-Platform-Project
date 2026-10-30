@@ -120,7 +120,7 @@ export default function MyStats() {
     <div className="min-h-screen bg-gray-50 py-10">
       <div className="max-w-4xl mx-auto px-6">
         <Link to="/tests" className="text-blue-600 hover:text-blue-700 font-medium">
-          К списку тестов
+          ←  К списку тестов
         </Link>
         <h1 className="text-4xl font-bold text-gray-900 mt-6 mb-8">Моя статистика</h1>
 

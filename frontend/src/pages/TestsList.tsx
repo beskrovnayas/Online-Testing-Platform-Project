@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { getTests, type Test } from '../api/testAPI';
 import { useNavigate } from 'react-router-dom';
 import { loadingMessages, errorMessages, emptyStateMessages } from '../components/LoadingMessages';
+import { getUserType } from '../api/http';
 
 
 
@@ -12,6 +13,7 @@ export default function TestsList() {
   const [error, setError] = useState<string | null>(null);
   const [messageIndex, setMessageIndex] = useState<number>(0);
   const navigate = useNavigate();
+  const isStudent = getUserType() === 'student';
 
   // Загружаем тесты
   useEffect(() => {
@@ -128,22 +130,17 @@ export default function TestsList() {
               Доступные тесты
             </h1>
 
-            <button
-              onClick={() => navigate('/stats')}
-              className="shrink-0 text-sm sm:text-base bg-white border border-blue-200 text-blue-700 hover:bg-blue-50 font-medium px-4 py-2 rounded-xl transition-colors"
-            >
-              Мои прохождения
-            </button>
+            {isStudent && (
+              <button
+                onClick={() => navigate('/stats')}
+                className="shrink-0 text-sm sm:text-base bg-white border border-blue-200 text-blue-700 hover:bg-blue-50 font-medium px-4 py-2 rounded-xl transition-colors"
+              >
+                Мои прохождения
+              </button>
+            )}
 
             <button
-              onClick={() => {
-                const ok = window.confirm(
-                  'позже: в зависимости от роли зашедшего -- своя страница профиля. пока что есть только страница препода'
-                );
-                if (ok) {
-                  navigate('/teacher');
-                }
-              }}
+              onClick={() => navigate('/profile')}
               className="text-sm sm:text-base bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium px-4 py-2 rounded-xl transition-colors"
             >
               Профиль
