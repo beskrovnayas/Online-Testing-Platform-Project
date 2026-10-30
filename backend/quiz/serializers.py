@@ -82,6 +82,7 @@ class TestAttemptHistorySerializer(serializers.ModelSerializer):
             'test_title',
             'score',
             'started_at',
+            'expires_at',
             'finished_at',
         ]
 
@@ -104,6 +105,7 @@ class TestAttemptDetailSerializer(serializers.ModelSerializer):
             'total_questions',
             'percentage',
             'started_at',
+            'expires_at',
             'finished_at',
             'details',
         ]

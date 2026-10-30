@@ -139,16 +139,16 @@ class StartAttemptView(APIView):
             )
 
         now = timezone.now()
+        expires_at = now + timedelta(minutes=test.time_limit)
 
         attempt = TestAttempt.objects.create(
             user=request.user,
             test=test,
             started_at=now,
+            expires_at=expires_at,
             finished_at=None,
             score=0
         )
-
-        expires_at = now + timedelta(minutes=test.time_limit)
 
         return Response(
             {
@@ -226,7 +226,7 @@ class SubmitAnswersView(APIView):
             )
 
         now = timezone.now()
-        expires_at = attempt.started_at + timedelta(minutes=test.time_limit)
+        expires_at = attempt.expires_at or attempt.started_at + timedelta(minutes=test.time_limit)
 
         if now >= expires_at:
             attempt.finished_at = now

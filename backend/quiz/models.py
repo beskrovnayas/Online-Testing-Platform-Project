@@ -124,6 +124,7 @@ class TestAttempt(models.Model): # модель попытки прохожде�
         verbose_name="Тест"
     )
     started_at = models.DateTimeField(default=timezone.now, verbose_name="Время начала")
+    expires_at = models.DateTimeField(blank=True, null=True, verbose_name="Дедлайн")
     finished_at = models.DateTimeField(blank=True, null=True, verbose_name="Время завершения")
     score = models.FloatField(default=0, verbose_name="Набранные баллы (проценты)")
 
