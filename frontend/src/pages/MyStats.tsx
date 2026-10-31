@@ -8,6 +8,7 @@ import {
 } from '../api/stats';
 
 const formatDate = (iso: string) => new Date(iso).toLocaleString('ru-RU');
+
 // локал.дата в формате YYYY-MM-DD
 const localDay = (iso: string) => new Date(iso).toLocaleDateString('en-CA');
 
@@ -28,13 +29,19 @@ const formatShort = (iso: string) =>
     minute: '2-digit',
   });
 
-// до 49% красный, 50–79% жёлтый, от 80% зелёный
 const cardTone = (item: AttemptHistoryItem) => {
   if (!item.finishedAt) return { box: 'bg-gray-100', text: 'text-gray-500' };
   const s = Math.round(item.score);
   if (s < 50) return { box: 'bg-red-50', text: 'text-red-600' };
   if (s < 80) return { box: 'bg-amber-50', text: 'text-amber-600' };
   return { box: 'bg-emerald-50', text: 'text-emerald-600' };
+};
+
+const renderComparisonBadge = (comparison?: string) => {
+  if (comparison === 'faster') return <span className="inline-flex items-center gap-1 text-emerald-600 bg-emerald-100/50 px-2 py-0.5 rounded-lg text-xs font-medium">Быстрее</span>;
+  if (comparison === 'slower') return <span className="inline-flex items-center gap-1 text-amber-600 bg-amber-100/50 px-2 py-0.5 rounded-lg text-xs font-medium">Медленнее</span>;
+  if (comparison === 'equal') return <span className="inline-flex items-center gap-1 text-blue-600 bg-blue-100/50 px-2 py-0.5 rounded-lg text-xs font-medium">Среднее</span>;
+  return null;
 };
 
 const fieldClass =
@@ -138,6 +145,14 @@ export default function MyStats() {
                     <p className="text-sm text-gray-500 mb-5">
                       {item.finishedAt ? 'Завершён' : 'Не завершена'}
                     </p>
+                    
+                    {/* Бейджик скорости в карточке */}
+                    {item.finishedAt && item.timeComparison && (
+                      <div className="mb-3">
+                        {renderComparisonBadge(item.timeComparison)}
+                      </div>
+                    )}
+
                     <p className="text-xs text-gray-600">Начат: {formatShort(item.startedAt)}</p>
                     {item.finishedAt && (
                       <p className="text-xs text-gray-600 mt-1">Закончен: {formatShort(item.finishedAt)}</p>
@@ -228,6 +243,7 @@ export default function MyStats() {
                   <th className="px-6 py-4 font-medium">Тест</th>
                   <th className="px-6 py-4 font-medium">Начат</th>
                   <th className="px-6 py-4 font-medium">Результат</th>
+                  <th className="px-6 py-4 font-medium">Скорость</th> {/* НОВАЯ КОЛОНКА */}
                   <th className="px-6 py-4 font-medium"></th>
                 </tr>
               </thead>
@@ -243,6 +259,12 @@ export default function MyStats() {
                         <span className="text-gray-400">не завершен</span>
                       )}
                     </td>
+                    
+                    {/* НОВАЯ ЯЧЕЙКА СО СКОРОСТЬЮ */}
+                    <td className="px-6 py-4">
+                      {item.finishedAt ? renderComparisonBadge(item.timeComparison) || <span className="text-gray-400">—</span> : <span className="text-gray-400">—</span>}
+                    </td>
+
                     <td className="px-6 py-4 text-right">
                       {item.finishedAt && (
                         <Link

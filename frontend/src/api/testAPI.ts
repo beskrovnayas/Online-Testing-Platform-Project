@@ -4,17 +4,16 @@ import { getAccessToken, refreshAccessToken, logout } from './auth';
 
 const API_BASE_URL = 'http://localhost:8000/api';
 
-// #region Интерфейсы
 export interface Test {
   id: number;
   title: string;
   description: string;
   duration: number;
-  // difficulty/category/succes: бэкенд их не отдаёт, остаются только для моков и вёрстки
-  difficulty?: 'easy' | 'medium' | 'hard' | 'Лёгкий' | 'Средний' | 'Сложный' ;
+  difficulty?: 'easy' | 'medium' | 'hard' | 'Лёгкий' | 'Средний' | 'Сложный';
   category?: string;
   questionCount?: number;
   succes?: number;
+  averageDurationSeconds?: number; 
 }
 
 interface BackendTest {
@@ -24,6 +23,7 @@ interface BackendTest {
   time_limit: number;
   questions_count?: number;
   author_username?: string;
+  average_duration_seconds?: number | null; 
 }
 
 export interface FullTest extends Test {
@@ -114,6 +114,7 @@ const normalizeTest = (test: BackendTest): Test => ({
   description: test.description,
   duration: test.time_limit,
   questionCount: test.questions_count,
+  averageDurationSeconds: test.average_duration_seconds ?? undefined,
 });
 
 export const getTests = async (): Promise<Test[]> => {
@@ -121,8 +122,7 @@ export const getTests = async (): Promise<Test[]> => {
     await new Promise(resolve => setTimeout(resolve, 1800));
     return mockTests;
   }
-
-  const response = await api.get<BackendTest[]>('/tests/');
+  const response = await api.get('/tests/');
   return response.data.map(normalizeTest);
 };
 

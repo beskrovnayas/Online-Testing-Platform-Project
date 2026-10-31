@@ -37,7 +37,7 @@ class Test(models.Model): # модель теста
             duration=ExpressionWrapper(F('finished_at') - F('started_at'), output_field=DurationField())
         ).aggregate(avg=Avg('duration'))['avg']
 
-        if avg_duration:
+        if avg_duration is not None:
             return int(avg_duration.total_seconds())
         return None
 

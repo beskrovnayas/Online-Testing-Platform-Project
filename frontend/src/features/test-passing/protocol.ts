@@ -19,13 +19,16 @@ export interface AttemptResult {
   startedAt?: string;
   finishedAt?: string;
   details: AnswerDetail[];
+  // Новые поля для времени
+  attemptTimeSeconds?: number;
+  averageTestTimeSeconds?: number | null;
+  timeComparison?: 'faster' | 'slower' | 'equal' | 'unknown';
 }
 
 export type FailureKind = 'auth' | 'unavailable' | 'expired' | 'network' | 'validation' | 'unsupported';
 
 export class PassingError extends Error {
   kind: FailureKind;
-
   constructor(kind: FailureKind, message: string) {
     super(message);
     this.name = 'PassingError';
@@ -34,15 +37,12 @@ export class PassingError extends Error {
 }
 
 const record = (value: unknown): Record<string, unknown> =>
-  value !== null && typeof value === 'object' && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : {};
+  value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
 
 const number = (value: unknown): number | undefined =>
   typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 
-const string = (value: unknown): string | undefined =>
-  typeof value === 'string' ? value : undefined;
+const string = (value: unknown): string | undefined => typeof value === 'string' ? value : undefined;
 
 const strings = (value: unknown): string[] =>
   Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
@@ -52,9 +52,11 @@ export function normalizeResult(value: unknown): AttemptResult {
   const correctAnswers = number(data.correct_answers ?? data.correctAnswers);
   const totalQuestions = number(data.total_questions ?? data.totalQuestions);
   const percentage = number(data.percentage ?? data.percent ?? data.score);
+
   if (percentage === undefined || percentage < 0 || percentage > 100) {
     throw new PassingError('validation', 'Сервер вернул некорректный результат теста.');
   }
+
   return {
     attemptId: number(data.attempt_id ?? data.id),
     testId: number(data.test_id),
@@ -70,13 +72,19 @@ export function normalizeResult(value: unknown): AttemptResult {
         questionId: number(detail.question_id) ?? 0,
         questionText: string(detail.question_text) ?? 'Вопрос',
         selectedTexts: detail.selected_option_text != null
-          ? [String(detail.selected_option_text)] : strings(detail.selected_option_texts),
+          ? [String(detail.selected_option_text)]
+          : strings(detail.selected_option_texts),
         correctTexts: detail.correct_option_text != null
-          ? [String(detail.correct_option_text)] : strings(detail.correct_option_texts),
+          ? [String(detail.correct_option_text)]
+          : strings(detail.correct_option_texts),
         isCorrect: typeof detail.is_correct === 'boolean' ? detail.is_correct : null,
         error: string(detail.error),
       };
     }),
+    // Парсинг новых полей
+    attemptTimeSeconds: number(data.attempt_time_seconds),
+    averageTestTimeSeconds: number(data.average_test_time_seconds),
+    timeComparison: string(data.time_comparison) as AttemptResult['timeComparison'],
   };
 }
 
@@ -87,22 +95,23 @@ export function buildAnswersPayload(testId: number, answers: SelectedAnswers, at
   if (attemptId !== undefined && (!Number.isSafeInteger(attemptId) || attemptId <= 0)) {
     throw new PassingError('validation', 'Некорректный номер попытки.');
   }
+
   const values: SelectedAnswers = {};
   for (const [questionId, selected] of Object.entries(answers)) {
     if (!Number.isSafeInteger(Number(questionId)) || Number(questionId) <= 0) {
       throw new PassingError('validation', 'Некорректный номер вопроса.');
     }
     const options = Array.isArray(selected) ? [...new Set(selected)] : [selected];
-    if (options.some((id) => !Number.isSafeInteger(id) || id <= 0)) {
-      throw new PassingError('validation', 'Некорректный вариант ответа.');
+    if (options.some((id) => !Number.isSafeInteger(id))) {
+      throw new PassingError('validation', 'Некорректный номер ответа.');
     }
-    if (options.length === 0) continue;
-    values[Number(questionId)] = Array.isArray(selected) ? options : selected;
+    values[Number(questionId)] = Array.isArray(selected) ? options : options[0];
   }
+
   return {
     test_id: testId,
+    ...(attemptId !== undefined ? { attempt_id: attemptId } : {}),
     answers: values,
-    ...(attemptId === undefined ? {} : { attempt_id: attemptId }),
   };
 }
 

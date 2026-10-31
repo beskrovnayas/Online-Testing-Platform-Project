@@ -14,42 +14,34 @@ export interface AttemptHistoryItem {
   score: number;
   startedAt: string;
   finishedAt: string | null;
+  attemptTimeSeconds?: number;
+  timeComparison?: 'faster' | 'slower' | 'equal' | 'unknown';
 }
 
-interface StatsResponse {
-  attempts_total: number;
-  tests_attempted: number;
-  average_score: number;
-  best_score: number;
-}
-
-interface HistoryResponse {
-  id: number;
-  test_id: number;
-  test_title: string;
-  score: number;
-  started_at: string;
-  finished_at: string | null;
-}
-
-export async function getAttemptStats(): Promise<AttemptStats> {
-  const { data } = await http.get<StatsResponse>('/attempts/stats/');
+export const getAttemptStats = async (): Promise<AttemptStats> => {
+  const response = await http.get('/attempts/stats/'); 
+  const data = response.data;
+  
   return {
-    attemptsTotal: data.attempts_total,
-    testsAttempted: data.tests_attempted,
-    averageScore: data.average_score,
-    bestScore: data.best_score,
+    attemptsTotal: data.attempts_total ?? data.attemptsTotal ?? 0,
+    testsAttempted: data.tests_attempted ?? data.testsAttempted ?? 0,
+    averageScore: data.average_score ?? data.averageScore ?? 0,
+    bestScore: data.best_score ?? data.bestScore ?? 0,
   };
-}
+};
 
-export async function getAttemptHistory(): Promise<AttemptHistoryItem[]> {
-  const { data } = await http.get<HistoryResponse[]>('/attempts/');
-  return data.map((item) => ({
+export const getAttemptHistory = async (): Promise<AttemptHistoryItem[]> => {
+  const response = await http.get('/attempts/');
+  
+  return response.data.map((item: any) => ({
     id: item.id,
-    testId: item.test_id,
-    testTitle: item.test_title,
+    testId: item.test_id ?? item.testId,
+    testTitle: item.test_title ?? item.testTitle,
     score: item.score,
-    startedAt: item.started_at,
-    finishedAt: item.finished_at,
+    startedAt: item.started_at ?? item.startedAt,
+    finishedAt: item.finished_at ?? item.finishedAt,
+    
+    attemptTimeSeconds: item.attempt_time_seconds ?? item.attemptTimeSeconds,
+    timeComparison: item.time_comparison ?? item.timeComparison,
   }));
-}
+};

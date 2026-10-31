@@ -16,27 +16,31 @@ class QuestionSerializer(serializers.ModelSerializer):
 
 class TestSerializer(serializers.ModelSerializer):
     hidden_for = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    average_duration_seconds = serializers.SerializerMethodField()
 
     class Meta:
         model = Test
-        fields = ['id', 'title', 'description', 'time_limit', 'author', 'is_published', 'hidden_for']
-        read_only_fields = ['author', 'is_published', 'hidden_for']
+        fields = ['id', 'title', 'description', 'time_limit', 'author', 'is_published', 'hidden_for', 'average_duration_seconds']
+        read_only_fields = ['author', 'is_published', 'hidden_for', 'average_duration_seconds']
+
+    def get_average_duration_seconds(self, obj):
+        return obj.get_average_duration_seconds()
 
 
 class TestListSerializer(serializers.ModelSerializer):
     questions_count = serializers.IntegerField(read_only=True)
     author_username = serializers.CharField(source='author.username', read_only=True)
+    average_duration_seconds = serializers.SerializerMethodField()
 
     class Meta:
         model = Test
         fields = [
-            'id',
-            'title',
-            'description',
-            'time_limit',
-            'questions_count',
-            'author_username',
+            'id', 'title', 'description', 'time_limit', 
+            'questions_count', 'author_username', 'average_duration_seconds'
         ]
+
+    def get_average_duration_seconds(self, obj):
+        return obj.get_average_duration_seconds()
 
 
 class TestDetailSerializer(serializers.ModelSerializer):
@@ -78,18 +82,33 @@ class TestDetailSerializer(serializers.ModelSerializer):
 class TestAttemptHistorySerializer(serializers.ModelSerializer):
     test_id = serializers.IntegerField(source='test.id', read_only=True)
     test_title = serializers.CharField(source='test.title', read_only=True)
+    attempt_time_seconds = serializers.SerializerMethodField()
+    time_comparison = serializers.SerializerMethodField()
 
     class Meta:
         model = TestAttempt
         fields = [
-            'id',
-            'test_id',
-            'test_title',
-            'score',
-            'started_at',
-            'expires_at',
-            'finished_at',
+            'id', 'test_id', 'test_title', 'score', 
+            'started_at', 'expires_at', 'finished_at',
+            'attempt_time_seconds', 'time_comparison'
         ]
+
+    def get_attempt_time_seconds(self, obj):
+        if obj.started_at and obj.finished_at:
+            return int((obj.finished_at - obj.started_at).total_seconds())
+        return None
+
+    def get_time_comparison(self, obj):
+        avg = obj.test.get_average_duration_seconds()
+        if avg is None or not obj.started_at or not obj.finished_at:
+            return "unknown"
+        
+        current = (obj.finished_at - obj.started_at).total_seconds()
+        if current < avg:
+            return "faster"
+        elif current > avg:
+            return "slower"
+        return "equal"
 
 class TestAttemptDetailSerializer(serializers.ModelSerializer):
     attempt_id = serializers.IntegerField(source='id', read_only=True)
@@ -173,6 +192,7 @@ class ParticipantRankingSerializer(serializers.Serializer):
     tests_completed = serializers.IntegerField()
     tests_total = serializers.IntegerField()
     rank = serializers.IntegerField(allow_null=True)
+    attempt_time_seconds = serializers.IntegerField(allow_null=True)
 
 
 class SubmitAnswersSerializer(serializers.Serializer):
